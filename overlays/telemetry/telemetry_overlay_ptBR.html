@@ -1,0 +1,248 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Overlay Telemetria  PT-BR</title>
+  <style>
+    :root {
+      --bg: rgba(0,0,0,0.45);
+      --accent: rgba(0,150,255,0.95);
+      --text: #fff;
+      --muted: rgba(255,255,255,0.85);
+      --font: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    html,body { height:100%; margin:0; padding:0; font-family: var(--font); color:var(--text); background:transparent; }
+    .overlay { position:relative; width:100%; height:100%; pointer-events:none; }
+    .panel {
+      position:absolute;
+      right:10px;
+      top:10px;
+      width:320px;
+      background:var(--bg);
+      border-radius:10px;
+      padding:12px;
+      box-sizing:border-box;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+    }
+    .row { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+    .label { font-size:13px; color:var(--muted); }
+    .value { font-size:18px; font-weight:700; color:var(--text); }
+    .bar {
+      height:10px;
+      width:100%;
+      background:rgba(255,255,255,0.08);
+      border-radius:6px;
+      overflow:hidden;
+      margin-top:6px;
+    }
+    .bar > i {
+      display:block;
+      height:100%;
+      width:0%;
+      background: linear-gradient(90deg, var(--accent), rgba(0,200,255,0.8));
+    }
+    .big {
+      font-size:36px;
+      font-weight:800;
+      letter-spacing:1px;
+    }
+    .small-muted { font-size:12px; color:var(--muted); }
+    /* CSS para evitar overflow com textos PT-BR maiores */
+    .panel { min-width:260px; max-width:420px; }
+    @media (max-width:420px) {
+      .panel { right:6px; left:6px; width:auto; padding:10px; }
+      .big { font-size:28px; }
+    }
+    /* indicadores de pneu simples */
+    .tyres { display:flex; gap:6px; margin-top:8px; }
+    .tyre { flex:1; background:rgba(255,255,255,0.03); padding:6px; border-radius:6px; text-align:center; font-size:11px; }
+    .tyre .tval { font-weight:700; font-size:13px; display:block; }
+    /* marcador de posição */
+    .position { position:absolute; left:10px; top:10px; background:var(--bg); padding:8px 12px; border-radius:10px; font-weight:800; font-size:20px; }
+  </style>
+</head>
+<body>
+  <div class="overlay" id="overlayRoot">
+    <div class="position" id="position">#-</div>
+
+    <div class="panel" id="telemetryPanel" aria-live="polite">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <div>
+          <div class="label small-muted" id="driverLabel">Piloto</div>
+          <div class="big" id="speedValue">-- km/h</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="label small-muted" id="gearLabel">Marcha</div>
+          <div class="value" id="gearValue">-</div>
+          <div class="small-muted" id="rpmLabel">RPM</div>
+          <div class="value" id="rpmValue">0</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div style="width:68%;">
+          <div class="label" id="throttleLabel">Acelerador</div>
+          <div class="bar"><i id="throttleBar"></i></div>
+        </div>
+        <div style="width:30%; text-align:right;">
+          <div class="label" id="brakeLabel">Freio</div>
+          <div class="value" id="brakeValue">0%</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div style="width:68%;">
+          <div class="label" id="steerLabel">Volante</div>
+          <div class="bar"><i id="steerBar"></i></div>
+        </div>
+        <div style="width:30%; text-align:right;">
+          <div class="label" id="fuelLabel">Combustível</div>
+          <div class="value" id="fuelValue">-- L</div>
+        </div>
+      </div>
+
+      <div style="margin-top:8px;">
+        <div class="label">Voltas</div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div class="small-muted" id="lapLabel">Volta atual: --</div>
+          <div class="small-muted" id="bestLapLabel">Melhor: --</div>
+        </div>
+      </div>
+
+      <div class="tyres" style="margin-top:10px;">
+        <div class="tyre">
+          <div class="small-muted">Dianteiro E</div>
+          <span class="tval" id="tFL">--%</span>
+        </div>
+        <div class="tyre">
+          <div class="small-muted">Dianteiro D</div>
+          <span class="tval" id="tFR">--%</span>
+        </div>
+        <div class="tyre">
+          <div class="small-muted">Traseiro E</div>
+          <span class="tval" id="tRL">--%</span>
+        </div>
+        <div class="tyre">
+          <div class="small-muted">Traseiro D</div>
+          <span class="tval" id="tRR">--%</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // CARREGA LOCAIS
+    async function loadLocale(lang = 'pt-BR') {
+      try {
+        const resp = await fetch('./locales/' + lang + '.json');
+        if (!resp.ok) throw new Error('Locale não encontrado');
+        const labels = await resp.json();
+
+        document.getElementById('driverLabel').textContent = labels.driver || 'Piloto';
+        document.getElementById('throttleLabel').textContent = labels.throttle || 'Acelerador';
+        document.getElementById('brakeLabel').textContent = labels.brake || 'Freio';
+        document.getElementById('steerLabel').textContent = labels.steer || 'Volante';
+        document.getElementById('fuelLabel').textContent = labels.fuel || 'Combustível';
+        document.getElementById('lapLabel').textContent = (labels.lap_time || 'Volta') + ' atual: --';
+        document.getElementById('bestLapLabel').textContent = (labels.best_lap || 'Melhor volta') + ': --';
+        document.getElementById('gearLabel').textContent = labels.gear || 'Marcha';
+        document.getElementById('rpmLabel').textContent = labels.rpm || 'RPM';
+        // posição é tratada separadamente
+      } catch (e) {
+        console.warn('Erro ao carregar locale:', e);
+      }
+    }
+
+    // Atualiza valores da overlay. Chame esta função do backend do projeto RAH
+    // Exemplo de objeto esperado:
+    // {
+    //   speed: 123.4, speedUnits: 'kmh'|'mph',
+    //   rpm: 8200, gear: 4,
+    //   throttle: 0.45, brake: 0.0, steer: 0.12,
+    //   fuel: 12.3, lap: 5, bestLap: 1.3456,
+    //   tyres: { fl: 12, fr: 13, rl: 8, rr: 9 },
+    //   position: 3
+    // }
+    function updateFromTelemetry(data = {}) {
+      // Speed
+      const speed = (data.speed === undefined) ? '--' : Math.round(data.speed);
+      const units = (data.speedUnits === 'mph') ? 'mph' : 'km/h';
+      document.getElementById('speedValue').textContent = (speed === '--' ? '--' : speed + ' ' + units);
+
+      // Gear & RPM
+      document.getElementById('gearValue').textContent = data.gear === undefined ? '-' : (data.gear === 0 ? 'N' : data.gear);
+      document.getElementById('rpmValue').textContent = data.rpm === undefined ? '0' : Math.round(data.rpm);
+
+      // Throttle / Brake / Steer bars
+      const throttlePct = (data.throttle !== undefined) ? Math.round(data.throttle * 100) : 0;
+      const brakePct = (data.brake !== undefined) ? Math.round(data.brake * 100) : 0;
+      const steerPct = (data.steer !== undefined) ? Math.round(Math.abs(data.steer) * 100) : 0;
+
+      document.getElementById('throttleBar').style.width = throttlePct + '%';
+      document.getElementById('brakeValue').textContent = brakePct + '%';
+      document.getElementById('steerBar').style.width = steerPct + '%';
+
+      // Fuel
+      document.getElementById('fuelValue').textContent = (data.fuel === undefined) ? '--' : (Math.round(data.fuel*10)/10) + ' L';
+
+      // Laps and times
+      document.getElementById('lapLabel').textContent = (data.lap === undefined) ? 'Volta atual: --' : 'Volta atual: ' + data.lap;
+      document.getElementById('bestLapLabel').textContent = 'Melhor: ' + ((data.bestLap === undefined) ? '--' : formatTime(data.bestLap));
+
+      // Tyres
+      const tyres = data.tyres || {};
+      document.getElementById('tFL').textContent = tyres.fl === undefined ? '--%' : tyres.fl + '%';
+      document.getElementById('tFR').textContent = tyres.fr === undefined ? '--%' : tyres.fr + '%';
+      document.getElementById('tRL').textContent = tyres.rl === undefined ? '--%' : tyres.rl + '%';
+      document.getElementById('tRR').textContent = tyres.rr === undefined ? '--%' : tyres.rr + '%';
+
+      // Position
+      document.getElementById('position').textContent = (data.position === undefined) ? '#-' : '#' + data.position;
+    }
+
+    function formatTime(seconds) {
+      if (seconds === null || seconds === undefined || isNaN(seconds)) return '--';
+      const ms = Math.floor((seconds - Math.floor(seconds)) * 1000);
+      const s = Math.floor(seconds % 60);
+      const m = Math.floor((seconds / 60) % 60);
+      return `${m}:${String(s).padStart(2,'0')}.${String(ms).padStart(3,'0')}`;
+    }
+
+    // DEMO: se ninguém fornecer dados, ativa modo de demonstração para testes locais
+    let demoInterval = null;
+    function startDemo() {
+      if (demoInterval) return;
+      let lap = 1;
+      demoInterval = setInterval(()=> {
+        const demo = {
+          speed: 60 + Math.random()*160,
+          speedUnits: 'kmh',
+          rpm: 3000 + Math.random()*7000,
+          gear: Math.floor(1 + Math.random()*6),
+          throttle: Math.random(),
+          brake: Math.random() > 0.85 ? Math.random() : 0,
+          steer: (Math.random()-0.5)*2,
+          fuel: 20 - Math.random()*10,
+          lap: lap,
+          bestLap: 72 + Math.random()*5,
+          tyres: { fl: Math.round(10 + Math.random()*80), fr: Math.round(10 + Math.random()*80), rl: Math.round(10 + Math.random()*80), rr: Math.round(10 + Math.random()*80) },
+          position: Math.floor(1 + Math.random()*20)
+        };
+        updateFromTelemetry(demo);
+        lap++;
+      }, 700);
+    }
+
+    // Start
+    loadLocale('pt-BR').then(()=> {
+      // se quiser testar no browser sem backend, descomente:
+      startDemo();
+    });
+
+    // Expor para window (para que o backend/py possa chamar window.updateFromTelemetry)
+    window.updateFromTelemetry = updateFromTelemetry;
+  </script>
+</body>
+</html>
