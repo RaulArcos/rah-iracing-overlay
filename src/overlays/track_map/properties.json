@@ -1,0 +1,16 @@
+{
+    "name": "track_map",
+    "display_name": "Track Map",
+    "description": "Displays all active cars around a compact track map.",
+    "resolution": {
+        "width": 360,
+        "height": 360
+    },
+    "position": {
+        "x": 0,
+        "y": 0
+    },
+    "dpi_info": {
+        "scale": 1
+    }
+}

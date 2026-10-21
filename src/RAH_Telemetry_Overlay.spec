@@ -18,32 +18,22 @@ overlays_dir = os.path.join(base_dir, 'overlays')
 interface_dir = os.path.join(base_dir, 'interface')
 common_dir = os.path.join(base_dir, 'common')
 
+def collect_data_files(root_dir, project_base_dir):
+    collected_files = []
+    for current_root, _, files in os.walk(root_dir):
+        for filename in files:
+            src_path = os.path.join(current_root, filename)
+            rel_path = os.path.relpath(src_path, project_base_dir)
+            dst_path = os.path.dirname(rel_path)
+            collected_files.append((rel_path, dst_path))
+    return collected_files
+
+
 # Get all data files
 datas = []
-
-# Add overlays files
-for root, dirs, files in os.walk(overlays_dir):
-    for file in files:
-        src_path = os.path.join(root, file)
-        rel_path = os.path.relpath(src_path, base_dir)
-        dst_path = os.path.dirname(rel_path)
-        datas.append((rel_path, dst_path))
-
-# Add interface files
-for root, dirs, files in os.walk(interface_dir):
-    for file in files:
-        src_path = os.path.join(root, file)
-        rel_path = os.path.relpath(src_path, base_dir)
-        dst_path = os.path.dirname(rel_path)
-        datas.append((rel_path, dst_path))
-
-# Add common files
-for root, dirs, files in os.walk(common_dir):
-    for file in files:
-        src_path = os.path.join(root, file)
-        rel_path = os.path.relpath(src_path, base_dir)
-        dst_path = os.path.dirname(rel_path)
-        datas.append((rel_path, dst_path))
+datas.extend(collect_data_files(overlays_dir, base_dir))
+datas.extend(collect_data_files(interface_dir, base_dir))
+datas.extend(collect_data_files(common_dir, base_dir))
 
 block_cipher = None
 
@@ -194,7 +184,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=True,
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,

@@ -1,0 +1,16 @@
+{
+    "name": "blindspot",
+    "display_name": "BlindSpot",
+    "description": "Highlights left/right blindspot occupancy warnings.",
+    "resolution": {
+        "width": 380,
+        "height": 120
+    },
+    "position": {
+        "x": 0,
+        "y": 0
+    },
+    "dpi_info": {
+        "scale": 1
+    }
+}

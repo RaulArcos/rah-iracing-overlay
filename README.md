@@ -55,23 +55,19 @@ Just open the .exe file like a normal windows program, you will be welcomed by a
   <img src=https://github.com/RaulArcos/rah-iracing-overlay/blob/development/images/interface_with_movement.png  width="600">
 </p>
 
-## Windows Security: Unblocking DLL Files
+## Windows Security: DLL blocking after download (Mark-of-the-Web)
 
-If you encounter errors related to `Python.Runtime.dll` or other DLL files failing to load, it might be due to Windows blocking these files after being downloaded from another computer.
-It is always better to build your own version, but if you don't know or simply don't want to, you will have to do this.
+Some Windows downloads add a security mark (`Zone.Identifier`) to extracted binaries. This may block runtime DLL loading (`Python.Runtime.dll`, WebView DLLs).
 
-### Steps to Unblock DLLs:
-1. Navigate to the `.dll` files, e.g.:
-   - `\RAH_Telemetry_Overlay_0.2.1_internal\pythonnet\runtime\Python.Runtime.dll`
-   - all `.dll` files in `\RAH_Telemetry_Overlay_0.2.1_internal\webview\lib\`
+Current releases include a startup safeguard that removes this mark from bundled runtime binaries before the telemetry stack initializes.
 
-2. Right-click each `.dll` file and select **Properties**.
+If a user still hits this issue, run this once inside the extracted release folder:
 
-3. In the **General** tab, check the **"Unblock"** checkbox at the bottom (if it’s visible).
+```powershell
+Get-ChildItem -Recurse -File | Unblock-File
+```
 
-4. Click **OK**.
-
-This is needed because Windows may block DLL files that come from another computer, causing the program to fail to load them properly.
+For maintainers: the robust long-term solution for public releases is code signing (Authenticode/Trusted Signing).
 
 ## **Contributing**
 

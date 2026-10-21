@@ -1,0 +1,16 @@
+{
+    "name": "radar",
+    "display_name": "Radar",
+    "description": "Shows close-proximity car alerts and nearby traffic.",
+    "resolution": {
+        "width": 320,
+        "height": 210
+    },
+    "position": {
+        "x": 0,
+        "y": 0
+    },
+    "dpi_info": {
+        "scale": 1
+    }
+}

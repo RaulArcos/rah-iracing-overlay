@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Relative Overlay</title>
+    <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='relative', filename='relative.css') }}">
+    <script src="{{ url_for('overlays.serve_static', overlay_name='relative', filename='relative.js') }}"></script>
+    <script src="{{ url_for('serve_common_js', filename='socket.io.min.js') }}"></script>
+</head>
+<body>
+    <div class="relative-container pywebview-drag-region">
+        <div class="header">
+            <span>Relative</span>
+            <span id="player-pos">P0</span>
+        </div>
+        <table class="relative-table">
+            <thead>
+                <tr>
+                    <th>POS</th>
+                    <th>CAR</th>
+                    <th>DRIVER</th>
+                    <th>GAP</th>
+                </tr>
+            </thead>
+            <tbody id="relative-body"></tbody>
+        </table>
+    </div>
+</body>
+</html>

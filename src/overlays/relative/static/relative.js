@@ -1,0 +1,38 @@
+document.addEventListener("DOMContentLoaded", function() {
+    const socket = io('/relative', {
+        reconnection: true,
+        reconnectionAttempts: Infinity,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        timeout: 20000
+    });
+
+    const playerPos = document.getElementById('player-pos');
+    const body = document.getElementById('relative-body');
+
+    socket.on('relative_update', function(data) {
+        if (!data || typeof data !== 'object') {
+            return;
+        }
+
+        playerPos.textContent = `P${data.player_position || 0}`;
+        const cars = Array.isArray(data.cars) ? data.cars : [];
+
+        body.innerHTML = cars.slice(0, 12).map(function(car) {
+            const gap = typeof car.gap === 'number' ? car.gap : 0;
+            const rowClass = gap <= 0 ? 'row-ahead' : 'row-behind';
+            const pitClass = car.on_pit_road ? 'row-pit' : '';
+            const gapLabel = `${gap > 0 ? '+' : ''}${gap.toFixed(2)}s`;
+            const name = (car.name || `Car ${car.car_idx || 0}`).slice(0, 20);
+
+            return `
+                <tr class="${rowClass} ${pitClass}">
+                    <td>${car.position || 0}</td>
+                    <td>#${car.car_number || car.car_idx || 0}</td>
+                    <td>${name}</td>
+                    <td>${gapLabel}</td>
+                </tr>
+            `;
+        }).join('');
+    });
+});

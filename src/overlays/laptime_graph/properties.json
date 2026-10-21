@@ -1,0 +1,16 @@
+{
+    "name": "laptime_graph",
+    "display_name": "Laptime graph",
+    "description": "Live lap-time trend with best/last/delta indicators.",
+    "resolution": {
+        "width": 540,
+        "height": 230
+    },
+    "position": {
+        "x": 0,
+        "y": 0
+    },
+    "dpi_info": {
+        "scale": 1
+    }
+}

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Radar Overlay</title>
+    <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='radar', filename='radar.css') }}">
+    <script src="{{ url_for('overlays.serve_static', overlay_name='radar', filename='radar.js') }}"></script>
+    <script src="{{ url_for('serve_common_js', filename='socket.io.min.js') }}"></script>
+</head>
+<body>
+    <div class="radar-container pywebview-drag-region">
+        <div class="radar-header">Radar</div>
+        <div class="alerts">
+            <div id="left-alert" class="alert">LEFT</div>
+            <div id="right-alert" class="alert">RIGHT</div>
+        </div>
+        <div id="nearby-list" class="nearby-list"></div>
+    </div>
+</body>
+</html>

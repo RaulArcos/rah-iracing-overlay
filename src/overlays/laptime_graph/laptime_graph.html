@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Laptime Graph Overlay</title>
+    <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='laptime_graph', filename='laptime_graph.css') }}">
+    <script src="{{ url_for('overlays.serve_static', overlay_name='laptime_graph', filename='laptime_graph.js') }}"></script>
+    <script src="{{ url_for('serve_common_js', filename='socket.io.min.js') }}"></script>
+</head>
+<body>
+    <div class="laptime-container pywebview-drag-region">
+        <div class="header">Laptime Graph</div>
+        <canvas id="laptime-canvas" width="500" height="140"></canvas>
+        <div class="stats">
+            <span id="best">Best: 0.000</span>
+            <span id="last">Last: 0.000</span>
+            <span id="delta">Delta: +0.000</span>
+        </div>
+    </div>
+</body>
+</html>

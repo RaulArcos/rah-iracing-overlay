@@ -1,6 +1,7 @@
 import os
 import sys
 import platform
+import logging
 
 # Windows-specific configuration for eventlet
 if platform.system() == 'Windows':
@@ -9,15 +10,69 @@ if platform.system() == 'Windows':
     # Force using threading mode for reliability
     os.environ['FORCE_THREADING_MODE'] = 'true'
 
-from web_interface import WebInterface, using_fallback_mode
-from overlay_window import OverlayWindow
+
+def _resolve_runtime_root() -> str:
+    if getattr(sys, 'frozen', False):
+        meipass = getattr(sys, '_MEIPASS', None)
+        if meipass and os.path.isdir(meipass):
+            return meipass
+        return os.path.join(os.path.dirname(sys.executable), '_internal')
+    return os.path.abspath(os.path.dirname(__file__))
+
+
+def _clear_zone_identifier(path: str) -> bool:
+    zone_identifier_path = f"{path}:Zone.Identifier"
+    try:
+        os.remove(zone_identifier_path)
+        return True
+    except FileNotFoundError:
+        return False
+    except OSError:
+        return False
+
+
+def _unblock_runtime_binaries() -> None:
+    if platform.system() != 'Windows':
+        return
+
+    if os.environ.get('RAH_SKIP_MOTW_UNBLOCK', '0') == '1':
+        return
+
+    runtime_root = _resolve_runtime_root()
+    if not os.path.isdir(runtime_root):
+        return
+
+    target_extensions = {'.dll', '.pyd', '.exe'}
+    unblocked_count = 0
+    unchanged_count = 0
+
+    for root, _, files in os.walk(runtime_root):
+        for filename in files:
+            _, extension = os.path.splitext(filename)
+            if extension.lower() not in target_extensions:
+                continue
+
+            if _clear_zone_identifier(os.path.join(root, filename)):
+                unblocked_count += 1
+            else:
+                unchanged_count += 1
+
+    if unblocked_count:
+        logging.info("Removed Mark-of-the-Web from %s runtime binaries", unblocked_count)
+    if unchanged_count:
+        logging.debug("No Mark-of-the-Web change for %s runtime binaries", unchanged_count)
+
+
+_unblock_runtime_binaries()
+
 import multiprocessing
 import atexit
 import signal
 import time
-import importlib
-import subprocess
 import threading
+
+from web_interface import WebInterface, using_fallback_mode
+from overlay_window import OverlayWindow
 
 overlay_processes = []
 web_interface_process = None
@@ -25,10 +80,7 @@ exit_flag = multiprocessing.Value('i', 0)  # Shared flag to signal program exit
 
 def resource_path(relative_path):
     """Get absolute path to resource, works for dev and for PyInstaller"""
-    try:
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(os.path.dirname(__file__))
+    base_path = getattr(sys, '_MEIPASS', os.path.abspath(os.path.dirname(__file__)))
     return os.path.join(base_path, relative_path)
 
 def detect_overlays():
@@ -78,35 +130,34 @@ def signal_handler(sig, frame):
     cleanup()
     sys.exit(0)
 
-def create_main_window_thread(exit_flag):
-    """Create the main window in a thread instead of a process on Windows"""
-    try:
-        interface = OverlayWindow('http://127.0.0.1:8085/', width=1000, height=700, frameless=False)
-        
-        def on_window_closed():
-            exit_flag.value = 1
-            
-        interface.set_on_closed(on_window_closed)
-        interface.create_overlay_window()
-    except Exception as e:
-        print(f"Error in main window thread: {e}")
-        exit_flag.value = 1
-
 def create_main_window(exit_flag):
     """
     Create the main window in a separate process
     """
     try:
-        interface = OverlayWindow('http://127.0.0.1:8085/', width=1000, height=700, frameless=False)
-        
-        def on_window_closed():
-            exit_flag.value = 1
-            
-        interface.set_on_closed(on_window_closed)
-        interface.create_overlay_window()
+        _create_main_window(exit_flag)
     except Exception as e:
         print(f"Error in main window process: {e}")
         exit_flag.value = 1
+
+
+def _create_main_window(exit_flag):
+    interface = OverlayWindow('http://127.0.0.1:8085/', width=1000, height=700, frameless=False)
+
+    def on_window_closed():
+        exit_flag.value = 1
+
+    interface.set_on_closed(on_window_closed)
+    interface.create_overlay_window()
+
+
+def _wait_for_exit_flag():
+    while True:
+        if exit_flag.value == 1:
+            print("Main window closed, initiating shutdown...")
+            cleanup()
+            break
+        time.sleep(0.1)
 
 def run_web_interface(selected_overlays):
     """
@@ -171,35 +222,13 @@ def main():
         
         time.sleep(0.5)
         
-        if frozen_on_windows:
-            import threading
-            main_window_thread = threading.Thread(
-                target=create_main_window_thread,
-                args=(exit_flag,)
-            )
-            main_window_thread.daemon = True
-            main_window_thread.start()
-            
-            while True:
-                if exit_flag.value == 1:
-                    print("Main window closed, initiating shutdown...")
-                    cleanup()
-                    break
-                time.sleep(0.1)
-        else:
-            overlay_process = multiprocessing.Process(
-                target=create_main_window,
-                args=(exit_flag,)
-            )
-            overlay_process.start()
-            overlay_processes.append(overlay_process)
-            
-            while True:
-                if exit_flag.value == 1:
-                    print("Main window closed, initiating shutdown...")
-                    cleanup()
-                    break
-                time.sleep(0.1)
+        overlay_process = multiprocessing.Process(
+            target=create_main_window,
+            args=(exit_flag,)
+        )
+        overlay_process.start()
+        overlay_processes.append(overlay_process)
+        _wait_for_exit_flag()
             
         sys.exit(0)
 

@@ -1,0 +1,16 @@
+{
+    "name": "relative",
+    "display_name": "Relative",
+    "description": "Shows nearby cars and time gaps around the player.",
+    "resolution": {
+        "width": 480,
+        "height": 340
+    },
+    "position": {
+        "x": 0,
+        "y": 0
+    },
+    "dpi_info": {
+        "scale": 1
+    }
+}

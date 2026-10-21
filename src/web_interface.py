@@ -103,6 +103,46 @@ class DriverInFrontNamespace(Namespace):
         logging.info("Client disconnected from driver in front namespace")
 
 
+class RelativeNamespace(Namespace):
+    def on_connect(self) -> None:
+        logging.info("Client connected to relative namespace")
+
+    def on_disconnect(self) -> None:
+        logging.info("Client disconnected from relative namespace")
+
+
+class TrackMapNamespace(Namespace):
+    def on_connect(self) -> None:
+        logging.info("Client connected to track map namespace")
+
+    def on_disconnect(self) -> None:
+        logging.info("Client disconnected from track map namespace")
+
+
+class RadarNamespace(Namespace):
+    def on_connect(self) -> None:
+        logging.info("Client connected to radar namespace")
+
+    def on_disconnect(self) -> None:
+        logging.info("Client disconnected from radar namespace")
+
+
+class BlindspotNamespace(Namespace):
+    def on_connect(self) -> None:
+        logging.info("Client connected to blindspot namespace")
+
+    def on_disconnect(self) -> None:
+        logging.info("Client disconnected from blindspot namespace")
+
+
+class LaptimeGraphNamespace(Namespace):
+    def on_connect(self) -> None:
+        logging.info("Client connected to laptime graph namespace")
+
+    def on_disconnect(self) -> None:
+        logging.info("Client disconnected from laptime graph namespace")
+
+
 class WebInterface:
     """
     Manages the web interface for displaying iRacing telemetry overlays.
@@ -179,6 +219,21 @@ class WebInterface:
             elif overlay == 'input_telemetry':
                 self.socketio.on_namespace(TelemetryNamespace(f'/{overlay}'))
                 print(f"Registered telemetry namespace: {overlay}")
+            elif overlay == 'relative':
+                self.socketio.on_namespace(RelativeNamespace(f'/{overlay}'))
+                print(f"Registered relative namespace: {overlay}")
+            elif overlay == 'track_map':
+                self.socketio.on_namespace(TrackMapNamespace(f'/{overlay}'))
+                print(f"Registered track map namespace: {overlay}")
+            elif overlay == 'radar':
+                self.socketio.on_namespace(RadarNamespace(f'/{overlay}'))
+                print(f"Registered radar namespace: {overlay}")
+            elif overlay == 'blindspot':
+                self.socketio.on_namespace(BlindspotNamespace(f'/{overlay}'))
+                print(f"Registered blindspot namespace: {overlay}")
+            elif overlay == 'laptime_graph':
+                self.socketio.on_namespace(LaptimeGraphNamespace(f'/{overlay}'))
+                print(f"Registered laptime graph namespace: {overlay}")
 
         logging.info(f"Registered Socket.IO namespaces for overlays: {available_overlays}")
 
@@ -244,6 +299,21 @@ class WebInterface:
                     self.socketio.emit('driver_in_front_update', driver_data, namespace='/driver_in_front')
                 except Exception as e:
                     logging.error(f"Error in driver in front processing: {e}")
+
+                relative_data = data.get('relative_data', {'player_car_idx': 0, 'player_position': 0, 'cars': []})
+                track_map_data = data.get('track_map_data', {'player_car_idx': 0, 'player_lap_dist_pct': 0.0, 'cars': []})
+                radar_data = data.get('radar_data', {'left_alert': False, 'right_alert': False, 'both_alert': False, 'nearby': []})
+                blindspot_data = data.get('blindspot_data', {'left_alert': False, 'right_alert': False, 'both_alert': False, 'active': False, 'message': 'CLEAR'})
+                laptime_graph_data = data.get('laptime_graph_data', {'history': [], 'best_lap_time': 0.0, 'last_lap_time': 0.0, 'current_lap_time': 0.0, 'delta_to_best': 0.0, 'delta_valid': False})
+
+                try:
+                    self.socketio.emit('relative_update', relative_data, namespace='/relative')
+                    self.socketio.emit('track_map_update', track_map_data, namespace='/track_map')
+                    self.socketio.emit('radar_update', radar_data, namespace='/radar')
+                    self.socketio.emit('blindspot_update', blindspot_data, namespace='/blindspot')
+                    self.socketio.emit('laptime_graph_update', laptime_graph_data, namespace='/laptime_graph')
+                except Exception as e:
+                    logging.error(f"Error emitting extended overlays: {e}")
                 
         except Exception as e:
             logging.error(f"Error in telemetry processing: {e}")

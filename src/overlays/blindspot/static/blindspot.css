@@ -1,0 +1,54 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0);
+}
+
+.blindspot-container {
+    width: 360px;
+    display: flex;
+    align-items: center;
+    background: rgba(15, 15, 15, 0.82);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #f1f1f1;
+    font-family: Arial, sans-serif;
+    padding: 10px;
+    cursor: move;
+    gap: 8px;
+}
+
+.zone {
+    width: 80px;
+    text-align: center;
+    padding: 12px 0;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-weight: 700;
+}
+
+.zone.active {
+    background: rgba(231, 76, 60, 0.9);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.center-zone {
+    flex: 1;
+    text-align: center;
+}
+
+.title {
+    font-size: 12px;
+    color: #bdbdbd;
+}
+
+.status-msg {
+    margin-top: 6px;
+    font-size: 18px;
+    font-weight: 700;
+}
