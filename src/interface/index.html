@@ -6,6 +6,7 @@
     <title>RAH iRacing Overlay</title>
     <link rel="stylesheet" href="{{ url_for('interface.serve_static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="{{ url_for('serve_common_js', filename='overlay_theme.js') }}"></script>
     <script src="{{ url_for('interface.serve_static', filename='main.js') }}" defer></script>
     
 </head>
@@ -13,6 +14,13 @@
     <div class="app-container">
         <header class="app-header">
             <h1>RAH iRacing Overlay</h1>
+            <div class="theme-selector">
+                <label for="themeSelect">Theme</label>
+                <select id="themeSelect">
+                    <option value="original" selected>Original RAH</option>
+                    <option value="glass">Glass</option>
+                </select>
+            </div>
         </header>
         <main class="app-main">
             <div class="content-container">

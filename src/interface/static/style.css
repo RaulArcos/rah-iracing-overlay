@@ -393,3 +393,34 @@ button:disabled {
         min-height: 400px;
     }
 }
+
+/* Theme selector (header) */
+.theme-selector {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-right: 20px;
+}
+
+.theme-selector label {
+    font-size: 14px;
+    color: #EFEFEF;
+}
+
+.theme-selector select {
+    background-color: rgba(29, 29, 29, 0.8);
+    color: #EFEFEF;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+    padding: 6px 10px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.9em;
+    cursor: pointer;
+}
+
+.theme-selector select:hover,
+.theme-selector select:focus {
+    border-color: #ED2727;
+    outline: none;
+}

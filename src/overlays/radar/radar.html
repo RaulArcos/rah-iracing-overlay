@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title>Radar Overlay</title>
     <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='radar', filename='radar.css') }}">
+    <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='overlay-theme.css') }}">
+    <script src="{{ url_for('serve_common_js', filename='overlay_theme.js') }}"></script>
     <script src="{{ url_for('overlays.serve_static', overlay_name='radar', filename='radar.js') }}"></script>
     <script src="{{ url_for('serve_common_js', filename='socket.io.min.js') }}"></script>
 </head>

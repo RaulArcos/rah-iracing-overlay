@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
+    initThemeSelector();
+
     fetch('/get_overlays')
         .then(response => response.json())
         .then(overlays => {
@@ -40,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <i class="fa-solid fa-arrows-up-down-left-right"></i>
                             </button>
                         </div>
-                        <button onclick="window.open('${overlay.url}', '_blank')" title="Open URL" class="small-button">
+                        <button onclick="openOverlayUrl('${overlay.url}')" title="Open URL" class="small-button">
                             <i class="fa-solid fa-globe"></i>
                         </button>
                     </div>
@@ -198,6 +200,36 @@ function syncActiveOverlays() {
         });
 }
 
+function initThemeSelector() {
+    const themeSelect = document.getElementById('themeSelect');
+    if (!themeSelect || !window.RAHOverlayTheme) {
+        return;
+    }
+
+    const stored = window.RAHOverlayTheme.getStored(window.localStorage);
+    themeSelect.value = stored || window.RAHOverlayTheme.defaultTheme;
+
+    themeSelect.addEventListener('change', function() {
+        if (window.RAHOverlayTheme.setStored(themeSelect.value, window.localStorage)) {
+            showToast(`Theme saved: ${themeSelect.value}`);
+        } else {
+            showToast('Could not save theme preference; it applies to this session only', true);
+        }
+    });
+}
+
+function getSelectedTheme() {
+    const themeSelect = document.getElementById('themeSelect');
+    if (window.RAHOverlayTheme && themeSelect && themeSelect.value) {
+        return window.RAHOverlayTheme.apply(themeSelect.value, document.documentElement);
+    }
+    return window.RAHOverlayTheme ? window.RAHOverlayTheme.defaultTheme : 'original';
+}
+
+function openOverlayUrl(url) {
+    window.open(`${url}?theme=${getSelectedTheme()}`, '_blank');
+}
+
 function launchOverlay(displayName, folderName, isTransparent = true) {
     fetch('/launch', {
         method: 'POST',
@@ -206,7 +238,8 @@ function launchOverlay(displayName, folderName, isTransparent = true) {
         },
         body: JSON.stringify({ 
             overlay: displayName,
-            transparent: isTransparent
+            transparent: isTransparent,
+            theme: getSelectedTheme()
         })
     })
     .then(response => response.json())

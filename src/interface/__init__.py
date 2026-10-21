@@ -17,6 +17,14 @@ interface_bp = Blueprint(
 opened_overlays = {}
 overlay_windows = {}
 
+# Supported overlay themes. Small explicit whitelist: the only values ever
+# appended to a desktop launch URL. The preference itself is persisted by the
+# launcher (localStorage) and pinned per overlay here, in memory only.
+OVERLAY_THEMES = ('original', 'glass')
+
+# folder_name -> last validated theme chosen at /launch (None = no pin).
+overlay_theme_preferences = {}
+
 logging.basicConfig(level=logging.DEBUG)
 
 @interface_bp.route('/')
@@ -30,6 +38,11 @@ def serve_static(filename):
 @interface_bp.route('/images/<filename>')
 def serve_images(filename):
     return send_from_directory(os.path.join(interface_bp.root_path, 'static', 'images'), filename)
+
+@interface_bp.route('/common/css/<path:filename>')
+def serve_common_css(filename):
+    common_css_folder = os.path.join(os.path.dirname(__file__), '..', 'common', 'css')
+    return send_from_directory(common_css_folder, filename)
 
 @interface_bp.route('/get_overlays')
 def get_overlays():
@@ -72,11 +85,30 @@ def get_overlays():
                 })
     return jsonify(overlays)
 
+def validated_theme(value):
+    """Return the theme only when it is whitelisted, else None."""
+    return value if value in OVERLAY_THEMES else None
+
+
+def overlay_launch_url(folder_name, theme):
+    """Build the overlay window URL, pinning a whitelisted ?theme= when given.
+
+    A missing or non-whitelisted theme keeps the plain URL, so legacy
+    launcher requests behave exactly as before this theme system existed.
+    """
+    theme = validated_theme(theme)
+    url = f"http://127.0.0.1:8085/overlay/{folder_name}"
+    if theme:
+        url = f"{url}?theme={theme}"
+    return url
+
+
 @interface_bp.route('/launch', methods=['POST'])
 def launch_overlay():
     data = request.get_json()
     overlay_name = data.get('overlay')
     is_transparent = data.get('transparent', True) 
+    theme = validated_theme(data.get('theme'))
     
     folder_name = next((overlay['folder_name'] for overlay in get_overlays().json if overlay['display_name'] == overlay_name), None)
     
@@ -90,7 +122,8 @@ def launch_overlay():
             del opened_overlays[folder_name]
             time.sleep(0.5)
         
-        overlay_url = f"http://127.0.0.1:8085/overlay/{folder_name}"
+        overlay_theme_preferences[folder_name] = theme
+        overlay_url = overlay_launch_url(folder_name, theme)
         properties_path = os.path.join(os.path.dirname(__file__), '..', 'overlays', folder_name, 'properties.json')
         
         logging.debug(f"Properties path: {properties_path}")
@@ -222,7 +255,9 @@ def report_window_position():
 
 def launch_overlay_with_transparency(folder_name, is_transparent):
     """Helper function to launch overlay with specified transparency"""
-    overlay_url = f"http://127.0.0.1:8085/overlay/{folder_name}"
+    # Reuse the theme pinned by the last /launch for this overlay so
+    # positioning toggles do not silently revert the theme.
+    overlay_url = overlay_launch_url(folder_name, overlay_theme_preferences.get(folder_name))
     properties_path = os.path.join(os.path.dirname(__file__), '..', 'overlays', folder_name, 'properties.json')
     
     if os.path.exists(properties_path):

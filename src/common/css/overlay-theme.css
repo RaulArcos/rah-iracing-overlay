@@ -1,0 +1,262 @@
+/* ==========================================================================
+   RAH overlay theme system: shared Original + Glass definitions (T2).
+
+   How it works
+   ------------
+   The theme runtime (/common/js/overlay_theme.js) resolves the theme from
+   ?theme=original|glass on the URL first, then the stored preference, then
+   'original', and sets it as <html data-rah-theme="...">.
+
+   Original is the absence of overrides: every rule below that restyles an
+   EXISTING overlay class is scoped under html[data-rah-theme="glass"], so the
+   default look never overrides per-overlay base stylesheets such as
+   input_telemetry.css.
+
+   Glass is an iOS-inspired translucent surface: soft light gradient, gentle
+   border, rounded corners. Honest limitation: backdrop-filter can only blur
+   page content behind the element; it cannot sample the game behind a
+   transparent browser source (OBS) or pywebview window. The translucent fill
+   is the real effect and works everywhere; the blur is a progressive
+   enhancement for content drawn inside the page.
+
+   New widgets (T3+) should build on the .rah-* utility classes at the bottom
+   of this file instead of re-deriving surfaces. See docs/overlay-themes.md.
+   ========================================================================== */
+
+/* Design tokens ------------------------------------------------------------ */
+:root {
+    /* Glass */
+    --rah-glass-surface: rgba(24, 26, 36, 0.45);
+    --rah-glass-surface-strong: rgba(24, 26, 36, 0.60);
+    --rah-glass-gradient: linear-gradient(155deg,
+            rgba(255, 255, 255, 0.16) 0%,
+            rgba(255, 255, 255, 0.06) 38%,
+            rgba(255, 255, 255, 0.02) 100%);
+    --rah-glass-border: rgba(255, 255, 255, 0.22);
+    --rah-glass-border-soft: rgba(255, 255, 255, 0.12);
+    --rah-glass-text: #f5f6fa;
+    --rah-glass-text-dim: rgba(245, 246, 250, 0.65);
+    --rah-glass-radius: 14px;
+    --rah-glass-radius-small: 10px;
+    --rah-glass-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+    --rah-glass-blur: 14px;
+    --rah-glass-hairline: rgba(255, 255, 255, 0.08);
+
+    /* Original RAH (tokens mirror the existing overlay base styles) */
+    --rah-original-surface: rgba(15, 15, 15, 0.82);
+    --rah-original-border: rgba(255, 255, 255, 0.12);
+    --rah-original-text: #f1f1f1;
+    --rah-original-text-dim: #bdbdbd;
+    --rah-original-radius: 12px;
+    --rah-original-hairline: rgba(255, 255, 255, 0.06);
+}
+
+/* Glass: the six current overlay surfaces ---------------------------------- */
+html[data-rah-theme="glass"] .telemetry-container,
+html[data-rah-theme="glass"] .relative-container,
+html[data-rah-theme="glass"] .radar-container,
+html[data-rah-theme="glass"] .blindspot-container,
+html[data-rah-theme="glass"] .track-map-container,
+html[data-rah-theme="glass"] .laptime-container {
+    background-color: var(--rah-glass-surface, rgba(24, 26, 36, 0.45));
+    background-image: var(--rah-glass-gradient, none);
+    border: 1px solid var(--rah-glass-border, rgba(255, 255, 255, 0.22));
+    border-radius: var(--rah-glass-radius, 14px);
+    box-shadow: var(--rah-glass-shadow, none);
+    backdrop-filter: blur(var(--rah-glass-blur, 14px));
+    -webkit-backdrop-filter: blur(var(--rah-glass-blur, 14px));
+    color: var(--rah-glass-text, #f5f6fa);
+}
+
+/* Glass: shared inner elements (headers, tables, chips, canvases) ---------- */
+html[data-rah-theme="glass"] .header,
+html[data-rah-theme="glass"] .radar-header,
+html[data-rah-theme="glass"] .title {
+    color: var(--rah-glass-text, #f5f6fa);
+    letter-spacing: 0.02em;
+}
+
+html[data-rah-theme="glass"] .relative-table th {
+    color: var(--rah-glass-text-dim, rgba(245, 246, 250, 0.65));
+    border-bottom: 1px solid var(--rah-glass-border-soft, rgba(255, 255, 255, 0.12));
+}
+
+html[data-rah-theme="glass"] .relative-table td,
+html[data-rah-theme="glass"] .nearby-item {
+    border-bottom: 1px solid var(--rah-glass-hairline, rgba(255, 255, 255, 0.08));
+}
+
+html[data-rah-theme="glass"] .zone,
+html[data-rah-theme="glass"] .alert {
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid var(--rah-glass-border-soft, rgba(255, 255, 255, 0.12));
+    border-radius: var(--rah-glass-radius-small, 10px);
+}
+
+html[data-rah-theme="glass"] .zone.active,
+html[data-rah-theme="glass"] .alert.active {
+    background: rgba(231, 76, 60, 0.85);
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+html[data-rah-theme="glass"] .bar {
+    border: 1px solid var(--rah-glass-border-soft, rgba(255, 255, 255, 0.12));
+}
+
+html[data-rah-theme="glass"] #telemetry-graph,
+html[data-rah-theme="glass"] #laptime-canvas,
+html[data-rah-theme="glass"] #track-map-canvas {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--rah-glass-border-soft, rgba(255, 255, 255, 0.12));
+}
+
+/* ==========================================================================
+   Reusable widget utilities for new overlays (T3+).
+   Nothing in the current overlays uses these class names, so the Original
+   look of existing overlays is untouched; every class carries its own
+   Original surface and gains the glass treatment under the theme scope.
+   ========================================================================== */
+
+.rah-card {
+    background: var(--rah-original-surface, rgba(15, 15, 15, 0.82));
+    border: 1px solid var(--rah-original-border, rgba(255, 255, 255, 0.12));
+    border-radius: var(--rah-original-radius, 12px);
+    color: var(--rah-original-text, #f1f1f1);
+    font-family: Arial, sans-serif;
+    padding: 10px;
+}
+
+.rah-card__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.rah-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 12px;
+}
+
+.rah-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 3px 2px;
+    border-bottom: 1px solid var(--rah-original-hairline, rgba(255, 255, 255, 0.06));
+}
+
+.rah-row:last-child {
+    border-bottom: none;
+}
+
+.rah-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 8px;
+}
+
+/* Metric hierarchy: label -> value (+ unit) -------------------------------- */
+.rah-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.rah-metric__label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--rah-original-text-dim, #bdbdbd);
+}
+
+.rah-metric__value {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--rah-original-text, #f1f1f1);
+}
+
+.rah-metric__unit {
+    font-size: 11px;
+    font-weight: 400;
+    margin-left: 2px;
+    color: var(--rah-original-text-dim, #bdbdbd);
+}
+
+/* Status chips -------------------------------------------------------------- */
+.rah-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.rah-status--ok {
+    color: #9ee4a5;
+    border-color: rgba(158, 228, 165, 0.4);
+}
+
+.rah-status--warn {
+    color: #f6d88a;
+    border-color: rgba(246, 216, 138, 0.4);
+}
+
+.rah-status--bad {
+    color: #f6b5b5;
+    border-color: rgba(246, 181, 181, 0.45);
+}
+
+/* Tabular numerals: stable columns while telemetry updates ----------------- */
+.rah-num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+}
+
+/* Glass treatment for the utility classes ----------------------------------- */
+html[data-rah-theme="glass"] .rah-card {
+    background-color: var(--rah-glass-surface, rgba(24, 26, 36, 0.45));
+    background-image: var(--rah-glass-gradient, none);
+    border: 1px solid var(--rah-glass-border, rgba(255, 255, 255, 0.22));
+    border-radius: var(--rah-glass-radius, 14px);
+    box-shadow: var(--rah-glass-shadow, none);
+    backdrop-filter: blur(var(--rah-glass-blur, 14px));
+    -webkit-backdrop-filter: blur(var(--rah-glass-blur, 14px));
+    color: var(--rah-glass-text, #f5f6fa);
+}
+
+html[data-rah-theme="glass"] .rah-card__header {
+    color: var(--rah-glass-text, #f5f6fa);
+}
+
+html[data-rah-theme="glass"] .rah-row {
+    border-bottom: 1px solid var(--rah-glass-hairline, rgba(255, 255, 255, 0.08));
+}
+
+html[data-rah-theme="glass"] .rah-metric__label,
+html[data-rah-theme="glass"] .rah-metric__unit {
+    color: var(--rah-glass-text-dim, rgba(245, 246, 250, 0.65));
+}
+
+html[data-rah-theme="glass"] .rah-metric__value {
+    color: var(--rah-glass-text, #f5f6fa);
+}
+
+html[data-rah-theme="glass"] .rah-status {
+    background: rgba(255, 255, 255, 0.10);
+    border-color: var(--rah-glass-border-soft, rgba(255, 255, 255, 0.12));
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
