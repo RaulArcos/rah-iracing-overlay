@@ -1,7 +1,7 @@
 {
     "name": "track_map",
     "display_name": "Track Map",
-    "description": "Displays all active cars around a compact track map.",
+    "description": "Displays all active cars on a compact lap-progress ring (positions derived from lap percentage, not scaled track geometry).",
     "resolution": {
         "width": 360,
         "height": 360

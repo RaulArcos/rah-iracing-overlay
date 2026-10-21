@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Track Map Overlay</title>
+    <title>Lap Progress Overlay</title>
     <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='track_map', filename='track_map.css') }}">
     <script src="{{ url_for('overlays.serve_static', overlay_name='track_map', filename='track_map.js') }}"></script>
     <script src="{{ url_for('serve_common_js', filename='socket.io.min.js') }}"></script>
 </head>
 <body>
     <div class="track-map-container pywebview-drag-region">
-        <div class="title">Track Map</div>
+        <div class="title">Lap Progress</div>
         <canvas id="track-map-canvas" width="320" height="320"></canvas>
     </div>
 </body>

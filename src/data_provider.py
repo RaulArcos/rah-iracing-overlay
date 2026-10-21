@@ -1,8 +1,15 @@
 import irsdk
-import os
 import logging
+import math
+import os
+import re
 import yaml
-from typing import Dict, List, Union, Any
+from typing import Any, Dict, List, Optional, Union
+
+# Recognized WeekendInfo.TrackLength formats, e.g. "5.891 km" or "2.5 miles".
+_TRACK_LENGTH_RE = re.compile(
+    r'^([0-9]*\.?[0-9]+)\s*(km|kilometers?|kilometres?|m|meters?|metres?|mi|miles?)$'
+)
 
 class DataProvider:
     """
@@ -19,6 +26,8 @@ class DataProvider:
         self.ir_sdk = irsdk.IRSDK()
         self.is_connected = False
         self.lap_times: List[float] = []
+        self._lap_tracking_session: Optional[int] = None
+        self._last_lap_seen: Optional[int] = None
         logging.debug(f"DataProvider initialized. Current working directory: {os.getcwd()}")
 
     def connect(self) -> bool:
@@ -31,6 +40,8 @@ class DataProvider:
         if not self.is_connected:
             self.is_connected = self.ir_sdk.startup()
             if self.is_connected:
+                # Completed-lap history does not survive a (re)connect.
+                self._reset_lap_tracking()
                 logging.info("Connected to iRacing")
             else:
                 logging.warning("Failed to connect to iRacing")
@@ -119,13 +130,15 @@ class DataProvider:
         if isinstance(value, bool):
             return float(value)
         if isinstance(value, (int, float)):
-            return float(value)
-        if isinstance(value, str):
+            result = float(value)
+        elif isinstance(value, str):
             try:
-                return float(value)
+                result = float(value)
             except ValueError:
                 return default
-        return default
+        else:
+            return default
+        return result if math.isfinite(result) else default
 
     def _safe_int(self, value: Any, default: int = 0) -> int:
         if isinstance(value, bool):
@@ -133,7 +146,10 @@ class DataProvider:
         if isinstance(value, int):
             return value
         if isinstance(value, float):
-            return int(value)
+            try:
+                return int(value)
+            except (ValueError, OverflowError):
+                return default
         if isinstance(value, str):
             try:
                 return int(value)
@@ -144,12 +160,60 @@ class DataProvider:
     def _safe_list(self, value: Any) -> List[Any]:
         return value if isinstance(value, list) else []
 
+    def _finite_or_none(self, value: Any) -> Optional[float]:
+        """Return value as a finite float, or None when missing/non-finite."""
+        if value is None:
+            return None
+        try:
+            result = float(value)
+        except (TypeError, ValueError):
+            return None
+        return result if math.isfinite(result) else None
+
+    def _get_session_dict(self, key: str) -> Dict[str, Any]:
+        """Return an SDK session-info section as a dict, whatever its form.
+
+        irsdk exposes sections like DriverInfo and WeekendInfo as parsed
+        top-level dicts; YAML strings and missing sections are tolerated.
+        """
+        raw = self._get_sdk_value(key, None)
+        if isinstance(raw, dict):
+            return raw
+        if isinstance(raw, str):
+            try:
+                parsed = yaml.safe_load(raw) or {}
+            except yaml.YAMLError:
+                return {}
+            return parsed if isinstance(parsed, dict) else {}
+        return {}
+
+    def _decode_car_left_right(self, value: Any) -> tuple:
+        """Decode irsdk.CarLeftRight into (left_alert, right_alert).
+
+        Enum: 0 off, 1 clear, 2 car left, 3 car right, 4 cars each side,
+        5 two cars left, 6 two cars right. Values are not bit flags.
+        """
+        state = self._safe_int(value, 0)
+        left = state in (2, 4, 5)
+        right = state in (3, 4, 6)
+        return left, right
+
     def _get_driver_metadata(self) -> Dict[int, Dict[str, Any]]:
         metadata: Dict[int, Dict[str, Any]] = {}
         try:
-            raw = self._get_sdk_value('SessionInfo', {})
-            session_info = raw if isinstance(raw, dict) else yaml.safe_load(raw or "") or {}
-            for driver in session_info.get('DriverInfo', {}).get('Drivers', []):
+            # irsdk exposes DriverInfo as a top-level parsed section next to
+            # SessionInfo (which only holds the Sessions list). The nested
+            # lookup below stays as a compatibility fallback for payloads
+            # that embed DriverInfo inside SessionInfo.
+            driver_info = self._get_session_dict('DriverInfo')
+            if not driver_info:
+                driver_info = self._get_session_dict('SessionInfo').get('DriverInfo') or {}
+            drivers = driver_info.get('Drivers') or []
+            if not isinstance(drivers, list):
+                return {}
+            for driver in drivers:
+                if not isinstance(driver, dict):
+                    continue
                 car_idx = int(driver.get('CarIdx', -1))
                 if car_idx < 0:
                     continue
@@ -163,19 +227,23 @@ class DataProvider:
 
     def _build_relative_data(self) -> Dict[str, Any]:
         player_idx = int(self._get_sdk_value('PlayerCarIdx', 0) or 0)
-        positions = self._get_sdk_value('CarIdxPosition', []) or []
-        class_positions = self._get_sdk_value('CarIdxClassPosition', []) or []
-        lap_pct = self._get_sdk_value('CarIdxLapDistPct', []) or []
-        laps_completed = self._get_sdk_value('CarIdxLapCompleted', []) or []
-        on_pit_road = self._get_sdk_value('CarIdxOnPitRoad', []) or []
-        player_best = float(self._get_sdk_value('LapBestLapTime', 90.0) or 90.0)
-        base_lap_time = max(player_best, 60.0)
+        positions = self._safe_list(self._get_sdk_value('CarIdxPosition', []))
+        class_positions = self._safe_list(self._get_sdk_value('CarIdxClassPosition', []))
+        lap_pct = self._safe_list(self._get_sdk_value('CarIdxLapDistPct', []))
+        laps_completed = self._safe_list(self._get_sdk_value('CarIdxLapCompleted', []))
+        on_pit_road = self._safe_list(self._get_sdk_value('CarIdxOnPitRoad', []))
+        player_best = self._finite_or_none(self._get_sdk_value('LapBestLapTime', 90.0))
+        base_lap_time = max(player_best if player_best and player_best > 0 else 90.0, 60.0)
         drivers = self._get_driver_metadata()
 
-        if player_idx >= len(lap_pct):
-            return {'player_car_idx': player_idx, 'player_position': 0, 'cars': []}
+        player_pct = self._finite_or_none(lap_pct[player_idx]) if player_idx < len(lap_pct) else None
+        player_completed = (self._finite_or_none(laps_completed[player_idx])
+                            if player_idx < len(laps_completed) else None)
+        if player_pct is None or player_completed is None:
+            return {'player_car_idx': player_idx, 'player_position': 0,
+                    'cars': [], 'gap_is_estimate': True}
 
-        player_progress = float(laps_completed[player_idx] or 0) + float(lap_pct[player_idx] or 0)
+        player_progress = player_completed + player_pct
         entries: List[Dict[str, Any]] = []
 
         for idx, pct in enumerate(lap_pct):
@@ -184,15 +252,21 @@ class DataProvider:
             if idx >= len(positions) or not positions[idx] or positions[idx] <= 0:
                 continue
 
-            target_progress = float((laps_completed[idx] if idx < len(laps_completed) else 0) or 0) + float(pct or 0)
-            progress_delta = target_progress - player_progress
+            target_pct = self._finite_or_none(pct)
+            target_completed = (self._finite_or_none(laps_completed[idx])
+                                if idx < len(laps_completed) else None)
+            if target_pct is None or target_completed is None:
+                continue  # invalid car: no usable position on track
+
+            # Wrap the full progress difference into (-0.5, 0.5] of a lap so
+            # lapped cars (differences beyond one lap) compare on-track
+            # proximity instead of a bogus unwrapped delta.
+            progress_delta = (target_completed + target_pct - player_progress) % 1.0
             if progress_delta > 0.5:
                 progress_delta -= 1.0
-            elif progress_delta < -0.5:
-                progress_delta += 1.0
 
             gap_seconds = progress_delta * base_lap_time
-            lap_delta = int(((laps_completed[idx] if idx < len(laps_completed) else 0) or 0) - (laps_completed[player_idx] or 0))
+            lap_delta = int(target_completed - player_completed)
             driver = drivers.get(idx, {'car_number': str(idx), 'name': f'Car {idx}'})
 
             entries.append({
@@ -201,7 +275,10 @@ class DataProvider:
                 'class_position': int((class_positions[idx] if idx < len(class_positions) else 0) or 0),
                 'car_number': driver['car_number'],
                 'name': driver['name'],
+                # Progress-based gap: an estimate from lap distance and the
+                # player's best lap time, never a measured time interval.
                 'gap': round(gap_seconds, 3),
+                'gap_is_estimate': True,
                 'lap_delta': lap_delta,
                 'on_pit_road': bool((on_pit_road[idx] if idx < len(on_pit_road) else False) or False),
             })
@@ -213,6 +290,7 @@ class DataProvider:
             'player_car_idx': player_idx,
             'player_position': player_position,
             'cars': entries[:12],
+            'gap_is_estimate': True,
         }
 
     def _build_track_map_data(self) -> Dict[str, Any]:
@@ -225,20 +303,22 @@ class DataProvider:
 
         cars: List[Dict[str, Any]] = []
         for idx, pct in enumerate(lap_pct):
-            surface = int((track_surface[idx] if idx < len(track_surface) else -1) or -1)
+            surface_raw = track_surface[idx] if idx < len(track_surface) else -1
+            surface = int(self._finite_or_none(surface_raw) or -1)
             if surface < 0:
                 continue
             cars.append({
                 'car_idx': idx,
-                'lap_dist_pct': float(pct or 0.0),
-                'position': int((positions[idx] if idx < len(positions) else 0) or 0),
-                'class_position': int((class_positions[idx] if idx < len(class_positions) else 0) or 0),
+                'lap_dist_pct': self._finite_or_none(pct) or 0.0,
+                'position': self._safe_int(positions[idx] if idx < len(positions) else 0, 0),
+                'class_position': self._safe_int(class_positions[idx] if idx < len(class_positions) else 0, 0),
                 'is_player': idx == player_idx,
                 'on_pit_road': bool((on_pit_road[idx] if idx < len(on_pit_road) else False) or False),
                 'track_surface': surface,
             })
 
-        player_pct = float((lap_pct[player_idx] if player_idx < len(lap_pct) else 0.0) or 0.0)
+        player_pct_raw = lap_pct[player_idx] if player_idx < len(lap_pct) else 0.0
+        player_pct = self._finite_or_none(player_pct_raw) or 0.0
         return {
             'player_car_idx': player_idx,
             'player_lap_dist_pct': player_pct,
@@ -247,44 +327,73 @@ class DataProvider:
 
     def _build_radar_data(self) -> Dict[str, Any]:
         player_idx = int(self._get_sdk_value('PlayerCarIdx', 0) or 0)
-        lap_pct = self._get_sdk_value('CarIdxLapDistPct', []) or []
-        laps_completed = self._get_sdk_value('CarIdxLapCompleted', []) or []
-        car_left_right = int(self._get_sdk_value('CarLeftRight', 0) or 0)
+        lap_pct = self._safe_list(self._get_sdk_value('CarIdxLapDistPct', []))
+        laps_completed = self._safe_list(self._get_sdk_value('CarIdxLapCompleted', []))
+        left_alert, right_alert = self._decode_car_left_right(self._get_sdk_value('CarLeftRight', 0))
+        track_length_m = self._get_track_length_m()
 
-        if player_idx >= len(lap_pct):
-            return {'left_alert': False, 'right_alert': False, 'both_alert': False, 'nearby': []}
+        player_pct = self._finite_or_none(lap_pct[player_idx]) if player_idx < len(lap_pct) else None
+        player_completed = (self._finite_or_none(laps_completed[player_idx])
+                            if player_idx < len(laps_completed) else None)
 
-        player_progress = float(laps_completed[player_idx] or 0) + float(lap_pct[player_idx] or 0)
         nearby: List[Dict[str, Any]] = []
+        if player_pct is not None and player_completed is not None:
+            player_progress = player_completed + player_pct
+            for idx, pct in enumerate(lap_pct):
+                if idx == player_idx:
+                    continue
+                target_pct = self._finite_or_none(pct)
+                target_completed = (self._finite_or_none(laps_completed[idx])
+                                    if idx < len(laps_completed) else None)
+                if target_pct is None or target_completed is None:
+                    continue
 
-        for idx, pct in enumerate(lap_pct):
-            if idx == player_idx:
-                continue
-            target_progress = float((laps_completed[idx] if idx < len(laps_completed) else 0) or 0) + float(pct or 0)
-            progress_delta = target_progress - player_progress
-            if progress_delta > 0.5:
-                progress_delta -= 1.0
-            elif progress_delta < -0.5:
-                progress_delta += 1.0
+                progress_delta = (target_completed + target_pct - player_progress) % 1.0
+                if progress_delta > 0.5:
+                    progress_delta -= 1.0
 
-            if abs(progress_delta) <= 0.035:
-                nearby.append({
-                    'car_idx': idx,
-                    'distance_pct': round(progress_delta, 4),
-                    'relation': 'ahead' if progress_delta > 0 else 'behind',
-                })
+                if abs(progress_delta) <= 0.035:
+                    nearby.append({
+                        'car_idx': idx,
+                        'distance_pct': round(progress_delta, 4),
+                        'relation': 'ahead' if progress_delta > 0 else 'behind',
+                    })
 
         return {
-            'left_alert': bool(car_left_right & 1),
-            'right_alert': bool(car_left_right & 2),
-            'both_alert': bool(car_left_right & 3 == 3),
+            'left_alert': left_alert,
+            'right_alert': right_alert,
+            'both_alert': left_alert and right_alert,
             'nearby': nearby,
+            'track_length_m': track_length_m,
         }
 
+    def _get_track_length_m(self) -> Optional[float]:
+        """Derive the track length in meters from WeekendInfo.TrackLength.
+
+        Returns None when the value is missing, non-numeric, unitless, or
+        non-positive; overlays must never invent a length.
+        """
+        weekend_info = self._get_session_dict('WeekendInfo')
+        raw = weekend_info.get('TrackLength') if isinstance(weekend_info, dict) else None
+        if not isinstance(raw, str):
+            return None
+        match = _TRACK_LENGTH_RE.match(raw.strip().lower().replace(',', ''))
+        if not match:
+            return None
+        value = float(match.group(1))
+        if not math.isfinite(value) or value <= 0:
+            return None
+        unit = match.group(2)
+        if unit.startswith('k'):
+            meters = value * 1000.0
+        elif unit.startswith('mi'):
+            meters = value * 1609.344
+        else:
+            meters = value
+        return round(meters, 3)
+
     def _build_blindspot_data(self) -> Dict[str, Any]:
-        car_left_right = int(self._get_sdk_value('CarLeftRight', 0) or 0)
-        left_alert = bool(car_left_right & 1)
-        right_alert = bool(car_left_right & 2)
+        left_alert, right_alert = self._decode_car_left_right(self._get_sdk_value('CarLeftRight', 0))
 
         message = 'CLEAR'
         if left_alert and right_alert:
@@ -304,10 +413,10 @@ class DataProvider:
 
     def _build_laptime_graph_data(self) -> Dict[str, Any]:
         lap_history = [round(float(value), 3) for value in self.get_lap_times() if isinstance(value, (int, float)) and value > 0]
-        best_lap = float(self._get_sdk_value('LapBestLapTime', 0.0) or 0.0)
-        last_lap = float(self._get_sdk_value('LapLastLapTime', 0.0) or 0.0)
-        current_lap = float(self._get_sdk_value('LapCurrentLapTime', 0.0) or 0.0)
-        delta_to_best = float(self._get_sdk_value('LapDeltaToBestLap', 0.0) or 0.0)
+        best_lap = self._finite_or_none(self._get_sdk_value('LapBestLapTime', 0.0)) or 0.0
+        last_lap = self._finite_or_none(self._get_sdk_value('LapLastLapTime', 0.0)) or 0.0
+        current_lap = self._finite_or_none(self._get_sdk_value('LapCurrentLapTime', 0.0)) or 0.0
+        delta_to_best = self._finite_or_none(self._get_sdk_value('LapDeltaToBestLap', 0.0)) or 0.0
         delta_valid = bool(self._get_sdk_value('LapDeltaToBestLap_OK', False) or False)
 
         return {
@@ -472,24 +581,53 @@ class DataProvider:
             logging.error(f"Unexpected error in get_lap_times: {e}")
             return []
     
+    def _reset_lap_tracking(self) -> None:
+        """Clear completed-lap history and forget the tracking baseline."""
+        self.lap_times = []
+        self._lap_tracking_session = None
+        self._last_lap_seen = None
+
     def _update_lap_times(self) -> None:
+        """Record LapLastLapTime on actual completed-lap transitions.
+
+        Rejects startup partial laps (the first observation only sets a
+        baseline), duplicate samples of the same lap, and invalid lap times
+        (zero, negative, or non-finite). History resets on session change,
+        reconnect, and lap rollback, and is capped at the last 10 laps.
         """
-        Update the stored lap times with new data from iRacing.
-        """
-        current_lap = self.ir_sdk['Lap']
-        
-        if not isinstance(current_lap, (int, float)) or current_lap is None:
+        current_lap = self._get_sdk_value('Lap', None)
+        if not isinstance(current_lap, (int, float)) or isinstance(current_lap, bool):
             return
-        
         current_lap = int(current_lap)
-        lap_time = self.ir_sdk['LapCurrentLapTime']
-        
-        if not isinstance(lap_time, (int, float)) or lap_time is None:
-            lap_time = 0.0
-        
-        lap_time = float(lap_time)
-        
-        if current_lap > len(self.lap_times):
-            self.lap_times.append(lap_time)
+
+        session_num = self._safe_int(self._get_sdk_value('SessionNum', 0))
+        if self._lap_tracking_session is None or session_num != self._lap_tracking_session:
+            # First observation after (re)connect or a new session: baseline
+            # only, so laps completed before we started watching are never
+            # recorded as partial samples.
+            self._reset_lap_tracking()
+            self._lap_tracking_session = session_num
+            self._last_lap_seen = current_lap
+            return
+
+        if current_lap < self._last_lap_seen:
+            # Lap rollback (session restart): history from the abandoned
+            # run is no longer valid.
+            self._reset_lap_tracking()
+            self._lap_tracking_session = session_num
+            self._last_lap_seen = current_lap
+            return
+
+        if current_lap <= self._last_lap_seen:
+            return  # duplicate sample of the current lap
+
+        # At least one lap completed since the last poll. LapLastLapTime
+        # holds only the most recently completed lap, so record it once and
+        # re-baseline; skipped laps cannot be recovered and are never
+        # fabricated.
+        last_lap_time = self._finite_or_none(self._get_sdk_value('LapLastLapTime', None))
+        if last_lap_time is not None and last_lap_time > 0:
+            self.lap_times.append(round(last_lap_time, 3))
             if len(self.lap_times) > 10:
                 self.lap_times.pop(0)
+        self._last_lap_seen = current_lap

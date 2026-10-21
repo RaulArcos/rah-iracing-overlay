@@ -19,10 +19,13 @@ document.addEventListener("DOMContentLoaded", function() {
         const cars = Array.isArray(data.cars) ? data.cars : [];
 
         body.innerHTML = cars.slice(0, 12).map(function(car) {
-            const gap = typeof car.gap === 'number' ? car.gap : 0;
-            const rowClass = gap <= 0 ? 'row-ahead' : 'row-behind';
+            const gap = typeof car.gap === 'number' && isFinite(car.gap) ? car.gap : 0;
+            // Positive gap = the car is ahead of the player (iRacing sign
+            // convention); negative = behind.
+            const rowClass = gap > 0 ? 'row-ahead' : 'row-behind';
             const pitClass = car.on_pit_road ? 'row-pit' : '';
-            const gapLabel = `${gap > 0 ? '+' : ''}${gap.toFixed(2)}s`;
+            const estimatePrefix = car.gap_is_estimate ? '~' : '';
+            const gapLabel = `${estimatePrefix}${gap > 0 ? '+' : ''}${gap.toFixed(2)}s`;
             const name = (car.name || `Car ${car.car_idx || 0}`).slice(0, 20);
 
             return `

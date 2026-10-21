@@ -15,20 +15,23 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function draw(history) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (!history.length) {
+        const points = history.filter(function(value) {
+            return typeof value === 'number' && isFinite(value);
+        });
+        if (!points.length) {
             return;
         }
 
-        const min = Math.min.apply(null, history);
-        const max = Math.max.apply(null, history);
+        const min = Math.min.apply(null, points);
+        const max = Math.max.apply(null, points);
         const range = Math.max(max - min, 0.01);
-        const stepX = canvas.width / Math.max(history.length - 1, 1);
+        const stepX = canvas.width / Math.max(points.length - 1, 1);
 
         ctx.lineWidth = 2;
         ctx.strokeStyle = '#4fc3f7';
         ctx.beginPath();
 
-        history.forEach(function(value, idx) {
+        points.forEach(function(value, idx) {
             const x = idx * stepX;
             const y = canvas.height - ((value - min) / range) * (canvas.height - 16) - 8;
             if (idx === 0) {
