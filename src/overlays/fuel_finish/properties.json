@@ -1,0 +1,16 @@
+{
+    "name": "fuel_finish",
+    "display_name": "Fuel & Finish",
+    "description": "Fuel level, observed burn per clean lap and an advisory fuel-to-finish estimate (never exact for timed races).",
+    "resolution": {
+        "width": 440,
+        "height": 250
+    },
+    "position": {
+        "x": 0,
+        "y": 0
+    },
+    "dpi_info": {
+        "scale": 1
+    }
+}

@@ -180,6 +180,13 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 ```
 
+Overlays that follow the shared themes should load `overlay_theme.js` and the
+shared `overlay-theme.css` after their own stylesheet and build on the
+`.rah-card` / `.rah-metric` / `.rah-status` utility classes (see
+`docs/overlay-themes.md`). `fuel_finish` and `session_strip` are complete
+examples that also show a dedicated nullable event and an explicit
+unavailable/disconnected state (see `docs/fuel-session.md`).
+
 ### 6. Modify web_interface.py to register your namespace
 
 Add your namespace to the `_setup_namespaces` method in `web_interface.py`:

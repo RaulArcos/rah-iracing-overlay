@@ -1,0 +1,45 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0);
+}
+
+.strip-container {
+    width: 780px;
+    box-sizing: border-box;
+    cursor: move;
+    pointer-events: auto;
+    user-select: none;
+}
+
+.strip-row {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1.1fr repeat(5, minmax(0, 0.8fr));
+    column-gap: 12px;
+    align-items: end;
+}
+
+.strip-session .rah-metric__value,
+.strip-small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.strip-small {
+    font-size: 14px;
+    padding-top: 4px;
+}
+
+.strip-flag {
+    align-self: flex-start;
+    white-space: nowrap;
+}
+
+.strip-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
+}

@@ -13,6 +13,7 @@ I just didn't wanted to pay for some overlays subcriptions to have the overlay t
 
 - [Compilation](#compilation)
 - [Usage](#usage)
+- [Available overlays](#available-overlays)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -68,6 +69,21 @@ Get-ChildItem -Recurse -File | Unblock-File
 ```
 
 For maintainers: the robust long-term solution for public releases is code signing (Authenticode/Trusted Signing).
+
+## **Available overlays**
+
+Every overlay is discovered automatically by the launcher and can be opened as `http://127.0.0.1:8085/overlay/<name>` (add `?theme=glass` for the Glass style; Original is the default).
+
+| Overlay | Folder / route name | Purpose |
+|---------|---------------------|---------|
+| Input Telemetry | `input_telemetry` | Throttle, brake, clutch, steering and gear |
+| Relative | `relative` | Nearby cars and estimated gaps |
+| Radar | `radar` | Close-proximity car alerts |
+| BlindSpot | `blindspot` | Left/right blindspot warnings |
+| Track Map | `track_map` | Cars on a lap-progress ring |
+| Laptime graph | `laptime_graph` | Lap-time trend, best/last/delta |
+| Fuel & Finish | `fuel_finish` | Fuel, observed burn per clean lap, advisory finish estimate ([details](docs/fuel-session.md)) |
+| Session Strip | `session_strip` | Session type, laps/time remaining, state, flag and position ([details](docs/fuel-session.md)) |
 
 ## **Contributing**
 

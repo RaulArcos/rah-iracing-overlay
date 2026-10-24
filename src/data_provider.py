@@ -11,6 +11,37 @@ _TRACK_LENGTH_RE = re.compile(
     r'^([0-9]*\.?[0-9]+)\s*(km|kilometers?|kilometres?|m|meters?|metres?|mi|miles?)$'
 )
 
+# SessionInfo limits are "unlimited" or a number; "<seconds>.<fraction> sec" for time.
+_SESSION_TIME_RE = re.compile(r'^([0-9]*\.?[0-9]+)\s*(?:sec|s)?$')
+
+# SessionLapsRemain[Ex] reports values >= 32000 (32767 in practice) when the
+# session has no lap limit; the pre-existing driver-in-front logic already
+# treats the same range as "unlimited".
+_LAPS_UNLIMITED_FROM = 32000
+# SessionTimeRemain reports one week in seconds when the session has no time
+# limit. This heuristic only matters when SessionInfo metadata is missing.
+_TIME_UNLIMITED_FROM_S = 604800.0
+
+# A fuel level that climbs more than sensor noise above its running minimum
+# is a refuel (pit service, tow or reset), never fuel burn. Measuring from
+# the running minimum catches slow pit-flow refuelling that no single poll
+# would reveal, while jitter below this amplitude never accumulates.
+_REFUEL_RISE_L = 0.1
+_FUEL_SAMPLE_WINDOW = 10
+
+
+def _enum_names(enum_class: Any) -> Dict[int, str]:
+    """Map the integer members of an irsdk enum class to their names."""
+    return {value: name for name, value in vars(enum_class).items()
+            if isinstance(value, int) and not isinstance(value, bool) and not name.startswith('_')}
+
+
+# Decoded only from the installed irsdk enums; unknown values stay unknown.
+_SESSION_STATE_NAMES = {
+    code: name for code, name in _enum_names(getattr(irsdk, 'SessionState', object)).items() if code != 0}
+_SESSION_FLAG_NAMES = _enum_names(getattr(irsdk, 'Flags', object))
+
+
 class DataProvider:
     """
     Provides telemetry data from iRacing.
@@ -28,6 +59,7 @@ class DataProvider:
         self.lap_times: List[float] = []
         self._lap_tracking_session: Optional[int] = None
         self._last_lap_seen: Optional[int] = None
+        self._reset_fuel_sampling()
         logging.debug(f"DataProvider initialized. Current working directory: {os.getcwd()}")
 
     def connect(self) -> bool:
@@ -115,6 +147,10 @@ class DataProvider:
             "radar_data": self._build_radar_data(),
             "blindspot_data": self._build_blindspot_data(),
             "laptime_graph_data": self._build_laptime_graph_data(),
+            # Built after the lap graph: lap tracking (and with it fuel
+            # sampling) advances inside _build_laptime_graph_data.
+            "fuel_finish_data": self._build_fuel_finish_data(),
+            "session_strip_data": self._build_session_strip_data(),
         }
 
     def _get_sdk_value(self, key: str, default: Any) -> Any:
@@ -586,6 +622,8 @@ class DataProvider:
         self.lap_times = []
         self._lap_tracking_session = None
         self._last_lap_seen = None
+        self._reset_fuel_sampling()
+
 
     def _update_lap_times(self) -> None:
         """Record LapLastLapTime on actual completed-lap transitions.
@@ -594,9 +632,13 @@ class DataProvider:
         baseline), duplicate samples of the same lap, and invalid lap times
         (zero, negative, or non-finite). History resets on session change,
         reconnect, and lap rollback, and is capped at the last 10 laps.
+
+        Fuel burn sampling (see _fuel_*) rides on the same lap detector so
+        the two can never disagree about where a lap starts and ends.
         """
         current_lap = self._get_sdk_value('Lap', None)
         if not isinstance(current_lap, (int, float)) or isinstance(current_lap, bool):
+            self._fuel_guard(self._fuel_poll_in_lap)
             return
         current_lap = int(current_lap)
 
@@ -608,6 +650,7 @@ class DataProvider:
             self._reset_lap_tracking()
             self._lap_tracking_session = session_num
             self._last_lap_seen = current_lap
+            self._fuel_guard(self._fuel_begin_lap, False)
             return
 
         if current_lap < self._last_lap_seen:
@@ -616,9 +659,11 @@ class DataProvider:
             self._reset_lap_tracking()
             self._lap_tracking_session = session_num
             self._last_lap_seen = current_lap
+            self._fuel_guard(self._fuel_begin_lap, False)
             return
 
         if current_lap <= self._last_lap_seen:
+            self._fuel_guard(self._fuel_poll_in_lap)
             return  # duplicate sample of the current lap
 
         # At least one lap completed since the last poll. LapLastLapTime
@@ -626,8 +671,296 @@ class DataProvider:
         # re-baseline; skipped laps cannot be recovered and are never
         # fabricated.
         last_lap_time = self._finite_or_none(self._get_sdk_value('LapLastLapTime', None))
-        if last_lap_time is not None and last_lap_time > 0:
+        valid_lap_time = last_lap_time is not None and last_lap_time > 0
+        if valid_lap_time:
             self.lap_times.append(round(last_lap_time, 3))
             if len(self.lap_times) > 10:
                 self.lap_times.pop(0)
+        self._fuel_guard(self._fuel_close_lap,
+                         current_lap == self._last_lap_seen + 1,
+                         last_lap_time if valid_lap_time else None)
         self._last_lap_seen = current_lap
+
+    # ------------------------------------------------------------------
+    # Fuel burn sampling
+    #
+    # A burn sample is the fuel used between two observed lap boundaries and
+    # is kept only when every poll of that lap was clean: valid fuel readings,
+    # no refuel, not on pit road or in a stall, on track and not in replay.
+    # Everything here is advisory input; failures reset sampling and never
+    # disturb the lap history above.
+    # ------------------------------------------------------------------
+
+    def _reset_fuel_sampling(self) -> None:
+        # (burn litres, lap seconds) of the most recent clean laps.
+        self._fuel_samples: List[tuple] = []
+        # Fuel at the observed start of the current lap; None when the lap
+        # did not start on an observed boundary (startup, skipped polls).
+        self._fuel_lap_start_level: Optional[float] = None
+        self._fuel_lap_clean = False
+        # Lowest fuel level seen since the last refuel/reset.
+        self._fuel_floor: Optional[float] = None
+
+    def _fuel_guard(self, step: Any, *args: Any) -> None:
+        try:
+            step(*args)
+        except Exception as e:
+            logging.debug(f"Fuel sampling reset after error: {e}")
+            self._reset_fuel_sampling()
+
+    def _valid_fuel_level(self, value: Any) -> Optional[float]:
+        """Finite non-negative number, else None. Zero is a real value."""
+        if isinstance(value, bool):
+            return None
+        number = self._finite_or_none(value)
+        return number if number is not None and number >= 0 else None
+
+    def _fuel_driving_state_ok(self) -> bool:
+        """Conservative guard over whichever driving-state fields exist."""
+        for key in ('OnPitRoad', 'PlayerCarInPitStall', 'IsReplayPlaying'):
+            if self._get_sdk_value(key, None):
+                return False
+        on_track = self._get_sdk_value('IsOnTrack', None)
+        return on_track is None or bool(on_track)
+
+    def _fuel_observe_poll(self) -> tuple:
+        """Read this poll: (fuel level or None, poll is clean).
+
+        A refuel at any poll (a rise above the running minimum, however
+        gradual) also discards every earlier burn sample so an old stint
+        average cannot mislead the new one.
+        """
+        level = self._valid_fuel_level(self._get_sdk_value('FuelLevel', None))
+        refueled = False
+        if level is not None:
+            floor = self._fuel_floor
+            if floor is not None and level - floor > _REFUEL_RISE_L:
+                refueled = True
+                self._fuel_samples = []
+                floor = None
+            self._fuel_floor = level if floor is None else min(floor, level)
+        clean = level is not None and not refueled and self._fuel_driving_state_ok()
+        return level, clean
+
+    def _fuel_poll_in_lap(self) -> None:
+        _, clean = self._fuel_observe_poll()
+        if not clean:
+            self._fuel_lap_clean = False
+
+    def _fuel_begin_lap(self, on_boundary: bool) -> None:
+        level, clean = self._fuel_observe_poll()
+        self._fuel_lap_start_level = level if on_boundary else None
+        self._fuel_lap_clean = clean
+
+    def _fuel_close_lap(self, consecutive: bool, lap_time: Optional[float]) -> None:
+        """Finish the lap that just ended and start the next one."""
+        level, clean = self._fuel_observe_poll()
+        start = self._fuel_lap_start_level
+        if (consecutive and lap_time is not None and clean and self._fuel_lap_clean
+                and start is not None and level is not None):
+            burn = start - level
+            if math.isfinite(burn) and burn > 0:
+                self._fuel_samples.append((burn, lap_time))
+                del self._fuel_samples[:-_FUEL_SAMPLE_WINDOW]
+        self._fuel_lap_start_level = level if consecutive else None
+        self._fuel_lap_clean = clean
+
+    # ------------------------------------------------------------------
+    # Session progress (shared by the session strip and the finish estimate)
+    # ------------------------------------------------------------------
+
+    def _strict_int(self, value: Any) -> Optional[int]:
+        """An integral finite number as int; bools, strings and NaN are None."""
+        if isinstance(value, bool):
+            return None
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float) and math.isfinite(value) and value.is_integer():
+            return int(value)
+        return None
+
+    def _get_session_entry(self) -> Optional[Dict[str, Any]]:
+        """SessionInfo.Sessions entry for the current SessionNum, if known."""
+        session_num = self._strict_int(self._get_sdk_value('SessionNum', None))
+        if session_num is None:
+            return None
+        sessions = self._get_session_dict('SessionInfo').get('Sessions')
+        if not isinstance(sessions, list):
+            return None
+        for session in sessions:
+            if isinstance(session, dict) and self._strict_int(session.get('SessionNum')) == session_num:
+                return session
+        return None
+
+    def _parse_laps_limit(self, raw: Any) -> tuple:
+        """SessionLaps metadata -> ('unlimited'|'limited'|None, laps or None)."""
+        if isinstance(raw, str):
+            text = raw.strip().lower()
+            if text == 'unlimited':
+                return 'unlimited', None
+            raw = int(text) if text.isdigit() else None
+        laps = self._strict_int(raw)
+        if laps is not None and laps > 0:
+            return 'limited', laps
+        return None, None
+
+    def _parse_time_limit(self, raw: Any) -> tuple:
+        """SessionTime metadata -> ('unlimited'|'limited'|None, seconds or None)."""
+        if isinstance(raw, str):
+            text = raw.strip().lower()
+            if text == 'unlimited':
+                return 'unlimited', None
+            match = _SESSION_TIME_RE.match(text)
+            raw = float(match.group(1)) if match else None
+        seconds = None if isinstance(raw, bool) else self._finite_or_none(raw)
+        if seconds is not None and seconds > 0:
+            return 'limited', seconds
+        return None, None
+
+    def _read_laps_remaining(self, laps_state: Optional[str]) -> tuple:
+        """(laps, source key). Prefers SessionLapsRemainEx; the legacy field
+        is only a fallback when the extended one is absent. 0 is a confirmed
+        finish; sentinels, negatives and NaN are unavailable."""
+        if laps_state == 'unlimited':
+            return None, None
+        for key in ('SessionLapsRemainEx', 'SessionLapsRemain'):
+            raw = self._get_sdk_value(key, None)
+            if raw is None:
+                continue
+            laps = self._strict_int(raw)
+            if laps is None or not 0 <= laps < _LAPS_UNLIMITED_FROM:
+                return None, None
+            return laps, key
+        return None, None
+
+    def _read_time_remaining(self, time_state: Optional[str]) -> Optional[float]:
+        if time_state == 'unlimited':
+            return None
+        raw = self._get_sdk_value('SessionTimeRemain', None)
+        seconds = None if isinstance(raw, bool) else self._finite_or_none(raw)
+        if seconds is None or not 0 <= seconds < _TIME_UNLIMITED_FROM_S:
+            return None
+        return round(seconds, 3)
+
+    def _get_session_progress(self) -> Dict[str, Any]:
+        entry = self._get_session_entry() or {}
+        laps_state, laps_total = self._parse_laps_limit(entry.get('SessionLaps'))
+        time_state, time_total = self._parse_time_limit(entry.get('SessionTime'))
+        if laps_state == 'unlimited' and time_state == 'unlimited':
+            limit = 'unlimited'
+        elif laps_state == 'limited' and time_state == 'limited':
+            limit = 'laps_and_time'
+        elif laps_state == 'limited' and time_state == 'unlimited':
+            limit = 'laps'
+        elif laps_state == 'unlimited' and time_state == 'limited':
+            limit = 'time'
+        else:
+            limit = None
+        laps_remaining, laps_source = self._read_laps_remaining(laps_state)
+        session_type = entry.get('SessionType')
+        return {
+            'session_type': session_type if isinstance(session_type, str) and session_type else None,
+            'limit': limit,
+            'session_laps_total': laps_total,
+            'session_time_total_s': round(time_total, 3) if time_total is not None else None,
+            'laps_remaining': laps_remaining,
+            'laps_remaining_source': laps_source,
+            'time_remaining_s': self._read_time_remaining(time_state),
+        }
+
+    def _player_ranking(self, key: str) -> Optional[int]:
+        player_idx = self._strict_int(self._get_sdk_value('PlayerCarIdx', None))
+        values = self._safe_list(self._get_sdk_value(key, []))
+        if player_idx is None or not 0 <= player_idx < len(values):
+            return None
+        rank = self._strict_int(values[player_idx])
+        return rank if rank is not None and rank > 0 else None
+
+    def _build_session_strip_data(self) -> Dict[str, Any]:
+        """Session strip payload: real metadata only, None when unavailable."""
+        payload: Dict[str, Any] = {
+            'session_type': None, 'limit': None,
+            'session_laps_total': None, 'session_time_total_s': None,
+            'laps_remaining': None, 'laps_remaining_source': None, 'time_remaining_s': None,
+            'state': None, 'state_code': None, 'flags': None,
+            'position': None, 'class_position': None, 'lap': None,
+        }
+        try:
+            payload.update(self._get_session_progress())
+            state_code = self._strict_int(self._get_sdk_value('SessionState', None))
+            if state_code in _SESSION_STATE_NAMES:
+                payload['state'] = _SESSION_STATE_NAMES[state_code]
+                payload['state_code'] = state_code
+            flags = self._strict_int(self._get_sdk_value('SessionFlags', None))
+            if flags is not None and flags >= 0:
+                payload['flags'] = [name for bit, name in sorted(_SESSION_FLAG_NAMES.items())
+                                    if flags & bit]
+            payload['position'] = self._player_ranking('CarIdxPosition')
+            payload['class_position'] = self._player_ranking('CarIdxClassPosition')
+            lap = self._strict_int(self._get_sdk_value('Lap', None))
+            payload['lap'] = lap if lap is not None and lap >= 0 else None
+        except Exception as e:
+            logging.debug(f"Session strip data unavailable: {e}")
+        return payload
+
+    # ------------------------------------------------------------------
+    # Fuel & finish payload
+    # ------------------------------------------------------------------
+
+    def _estimate_finish_laps(self, progress: Dict[str, Any]) -> tuple:
+        """(laps still to run, basis) or (None, None) when not knowable.
+
+        Lap-limited sessions use the reported laps remaining as-is: whole
+        laps, so a lap in progress counts fully (never short). Timed
+        sessions cannot give an exact distance; the estimate assumes the
+        fastest recently sampled clean lap, so it errs towards more laps,
+        and adds one lap for finishing the lap in progress after the clock.
+        """
+        if progress['laps_remaining'] is not None:
+            return progress['laps_remaining'], 'laps_remaining'
+        if progress['limit'] not in ('time', 'laps_and_time'):
+            return None, None  # SessionInfo does not establish a time limit
+        time_remaining = progress['time_remaining_s']
+        if time_remaining is not None and self._fuel_samples:
+            fastest_lap = min(lap_time for _, lap_time in self._fuel_samples)
+            return round(time_remaining / fastest_lap + 1.0, 3), 'timed_conservative_estimate'
+        return None, None
+
+    def _build_fuel_finish_data(self) -> Dict[str, Any]:
+        """Fuel & Finish payload: measured fuel, observed burn, advisory finish."""
+        payload: Dict[str, Any] = {
+            'fuel_level_l': None, 'fuel_level_pct': None,
+            'avg_burn_l_per_lap': None, 'burn_sample_count': 0, 'burn_source': None,
+            'laps_of_fuel': None,
+            'finish_laps_remaining': None, 'finish_basis': None,
+            'finish_fuel_needed_l': None, 'finish_fuel_to_add_l': None,
+            'is_estimate': True, 'advisory': True,
+        }
+        try:
+            level = self._valid_fuel_level(self._get_sdk_value('FuelLevel', None))
+            fraction = self._valid_fuel_level(self._get_sdk_value('FuelLevelPct', None))
+            payload['fuel_level_l'] = round(level, 3) if level is not None else None
+            if fraction is not None and fraction <= 1.0:
+                payload['fuel_level_pct'] = round(fraction * 100.0, 2)
+
+            samples = list(self._fuel_samples)
+            payload['burn_sample_count'] = len(samples)
+            average = None
+            if samples:
+                average = sum(burn for burn, _ in samples) / len(samples)
+                payload['avg_burn_l_per_lap'] = round(average, 3)
+                payload['burn_source'] = 'observed_clean_laps'
+                if level is not None:
+                    payload['laps_of_fuel'] = round(level / average, 2)
+
+            finish_laps, basis = self._estimate_finish_laps(self._get_session_progress())
+            payload['finish_laps_remaining'] = finish_laps
+            payload['finish_basis'] = basis
+            if finish_laps is not None and average is not None:
+                needed = average * finish_laps
+                payload['finish_fuel_needed_l'] = round(needed, 3)
+                if level is not None:
+                    payload['finish_fuel_to_add_l'] = round(max(needed - level, 0.0), 3)
+        except Exception as e:
+            logging.debug(f"Fuel data unavailable: {e}")
+        return payload

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Session Strip Overlay</title>
+    <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='session_strip', filename='session_strip.css') }}">
+    <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='overlay-theme.css') }}">
+    <script src="{{ url_for('serve_common_js', filename='overlay_theme.js') }}"></script>
+    <script src="{{ url_for('overlays.serve_static', overlay_name='session_strip', filename='session_strip.js') }}"></script>
+    <script src="{{ url_for('serve_common_js', filename='socket.io.min.js') }}"></script>
+</head>
+<body>
+    <div class="strip-container rah-card pywebview-drag-region">
+        <div class="strip-row">
+            <div class="rah-metric strip-session">
+                <span class="rah-metric__label">Session <span id="strip-limit">--</span></span>
+                <span class="rah-metric__value" id="strip-type">--</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">State</span>
+                <span class="rah-metric__value strip-small" id="strip-state">--</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Flag</span>
+                <span class="rah-status strip-flag" id="strip-flag">--</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Laps left</span>
+                <span class="rah-metric__value rah-num" id="strip-laps">--</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Time left</span>
+                <span class="rah-metric__value rah-num" id="strip-time">--</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Lap</span>
+                <span class="rah-metric__value rah-num" id="strip-lap">--</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Pos</span>
+                <span class="rah-metric__value rah-num" id="strip-pos">--</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Class</span>
+                <span class="rah-metric__value rah-num" id="strip-class-pos">--</span>
+            </div>
+        </div>
+        <div class="strip-footer">
+            <span id="strip-status" class="rah-status rah-status--warn">Waiting for data</span>
+        </div>
+    </div>
+</body>
+</html>

@@ -31,6 +31,8 @@ OVERLAYS = [
     'blindspot',
     'track_map',
     'laptime_graph',
+    'fuel_finish',
+    'session_strip',
 ]
 
 

@@ -143,6 +143,27 @@ class LaptimeGraphNamespace(Namespace):
         logging.info("Client disconnected from laptime graph namespace")
 
 
+class FuelFinishNamespace(Namespace):
+    def on_connect(self) -> None:
+        logging.info("Client connected to fuel finish namespace")
+
+    def on_disconnect(self, *args: Any) -> None:
+        logging.info("Client disconnected from fuel finish namespace")
+
+
+class SessionStripNamespace(Namespace):
+    def on_connect(self) -> None:
+        logging.info("Client connected to session strip namespace")
+
+    def on_disconnect(self, *args: Any) -> None:
+        logging.info("Client disconnected from session strip namespace")
+
+
+# Payload sections with a dedicated overlay event. They are kept out of the
+# legacy telemetry_update normalization, which would flatten them to 0.0.
+DEDICATED_PAYLOAD_KEYS = ('fuel_finish_data', 'session_strip_data')
+
+
 class WebInterface:
     """
     Manages the web interface for displaying iRacing telemetry overlays.
@@ -234,6 +255,12 @@ class WebInterface:
             elif overlay == 'laptime_graph':
                 self.socketio.on_namespace(LaptimeGraphNamespace(f'/{overlay}'))
                 print(f"Registered laptime graph namespace: {overlay}")
+            elif overlay == 'fuel_finish':
+                self.socketio.on_namespace(FuelFinishNamespace(f'/{overlay}'))
+                print(f"Registered fuel finish namespace: {overlay}")
+            elif overlay == 'session_strip':
+                self.socketio.on_namespace(SessionStripNamespace(f'/{overlay}'))
+                print(f"Registered session strip namespace: {overlay}")
 
         logging.info(f"Registered Socket.IO namespaces for overlays: {available_overlays}")
 
@@ -278,7 +305,8 @@ class WebInterface:
         try:
             data = self.data_provider.get_telemetry_data()
             if data:
-                normalized_data = self._normalize_data(data)
+                normalized_data = self._normalize_data(
+                    {key: value for key, value in data.items() if key not in DEDICATED_PAYLOAD_KEYS})
                 
                 # Standard emission for all modes - keep it simple
                 try:
@@ -314,6 +342,13 @@ class WebInterface:
                     self.socketio.emit('laptime_graph_update', laptime_graph_data, namespace='/laptime_graph')
                 except Exception as e:
                     logging.error(f"Error emitting extended overlays: {e}")
+
+                # Nullable payloads: None tells the overlay "unavailable".
+                try:
+                    self.socketio.emit('fuel_finish_update', data.get('fuel_finish_data'), namespace='/fuel_finish')
+                    self.socketio.emit('session_strip_update', data.get('session_strip_data'), namespace='/session_strip')
+                except Exception as e:
+                    logging.error(f"Error emitting fuel/session overlays: {e}")
                 
         except Exception as e:
             logging.error(f"Error in telemetry processing: {e}")

@@ -1,0 +1,16 @@
+{
+    "name": "session_strip",
+    "display_name": "Session Strip",
+    "description": "Session type, limit, laps/time remaining, state, flag and your position from real iRacing session data.",
+    "resolution": {
+        "width": 820,
+        "height": 130
+    },
+    "position": {
+        "x": 0,
+        "y": 0
+    },
+    "dpi_info": {
+        "scale": 1
+    }
+}
