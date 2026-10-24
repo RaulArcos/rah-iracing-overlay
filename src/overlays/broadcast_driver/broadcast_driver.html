@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Broadcast Driver Card Overlay</title>
+    <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='broadcast_driver', filename='broadcast_driver.css') }}">
+    <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='overlay-theme.css') }}">
+    <script src="{{ url_for('serve_common_js', filename='overlay_theme.js') }}"></script>
+    <script src="{{ url_for('overlays.serve_static', overlay_name='broadcast_driver', filename='broadcast_driver.js') }}"></script>
+    <script src="{{ url_for('serve_common_js', filename='socket.io.min.js') }}"></script>
+</head>
+<body>
+    <div class="bd-container rah-card pywebview-drag-region">
+        <div class="rah-card__header">
+            <span>Broadcast Driver</span>
+            <span id="bd-status" class="rah-status rah-status--warn">Waiting for data</span>
+        </div>
+        <div class="bd-identity">
+            <span class="bd-number rah-num" id="bd-number">—</span>
+            <span class="bd-name" id="bd-name">—</span>
+            <span class="rah-status" id="bd-class">—</span>
+        </div>
+        <div class="rah-grid bd-grid">
+            <div class="rah-metric">
+                <span class="rah-metric__label">Position</span>
+                <span class="rah-metric__value rah-num" id="bd-position">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Class pos</span>
+                <span class="rah-metric__value rah-num" id="bd-class-position">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Laps</span>
+                <span class="rah-metric__value rah-num" id="bd-laps">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Last lap</span>
+                <span class="rah-metric__value rah-num" id="bd-last">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Best lap</span>
+                <span class="rah-metric__value rah-num" id="bd-best">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Pit road</span>
+                <span class="rah-status" id="bd-pit">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Session</span>
+                <span class="rah-metric__value bd-text" id="bd-session">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Camera car idx</span>
+                <span class="rah-metric__value rah-num" id="bd-camera">—</span>
+            </div>
+        </div>
+        <div class="bd-footer">Follows the broadcast camera. Your own speed, pedals, RPM, gear and fuel are never shown as this driver's data.</div>
+    </div>
+</body>
+</html>

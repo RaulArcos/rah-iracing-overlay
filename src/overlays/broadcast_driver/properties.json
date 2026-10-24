@@ -1,0 +1,16 @@
+{
+    "name": "broadcast_driver",
+    "display_name": "Broadcast Driver Card",
+    "description": "Lower-third card for the driver the broadcast camera follows: name, number, class, position, laps, last/best lap and pit status. Camera-followed car only; your own inputs are never shown as another driver's data.",
+    "resolution": {
+        "width": 620,
+        "height": 250
+    },
+    "position": {
+        "x": 0,
+        "y": 0
+    },
+    "dpi_info": {
+        "scale": 1
+    }
+}

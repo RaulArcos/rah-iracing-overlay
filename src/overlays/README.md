@@ -191,6 +191,8 @@ arrays with guarded, class-aware data (see `docs/battle-standings.md`).
 `pit_assistant` and `weather` are read-only card layouts with a custom grid
 (a compound `.rah-grid.pit-grid` selector, because the shared stylesheet loads
 later); see `docs/pit-weather.md`.
+`broadcast_driver` is a lower-third card that follows the broadcast camera
+(`CamCarIdx`) with per-car SDK data only; see `docs/broadcast-driver.md`.
 
 ### 6. Modify web_interface.py to register your namespace
 

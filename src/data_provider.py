@@ -62,6 +62,10 @@ _TRACK_WETNESS_NAMES = _enum_names(getattr(irsdk, 'TrackWetness', object))
 _PIT_LIMIT_RE = re.compile(r'^([0-9]*\.?[0-9]+)\s*(kph|km/h|mph|m/s)$', re.IGNORECASE)
 _TO_KMH = {'kph': 1.0, 'km/h': 1.0, 'mph': 1.609344, 'm/s': 3.6}
 
+# Per-car SDK arrays the Broadcast Driver Card reads for the camera-followed car.
+_BROADCAST_ARRAYS = ('CarIdxPosition', 'CarIdxClassPosition', 'CarIdxLapCompleted',
+                     'CarIdxLastLapTime', 'CarIdxBestLapTime', 'CarIdxOnPitRoad')
+
 
 class DataProvider:
     """
@@ -179,6 +183,7 @@ class DataProvider:
         # Last: opponent lap observation must follow any lap-tracking reset
         # triggered while the player's lap graph was built above.
         data.update(self._build_race_overlay_data())
+        data['broadcast_driver_data'] = self._build_broadcast_driver_data()
         return data
 
     def _get_sdk_value(self, key: str, default: Any) -> Any:
@@ -1469,3 +1474,67 @@ class DataProvider:
         except Exception as e:
             logging.debug(f"Standings/battle data unavailable: {e}")
         return payloads
+
+    # ------------------------------------------------------------------
+    # Broadcast Driver Card
+    #
+    # Follows the broadcast camera (CamCarIdx) only. Identity comes from
+    # DriverInfo.Drivers and statistics from per-car SDK arrays; a field the
+    # SDK does not give for that car is None. Player-only variables (speed,
+    # pedals, steering, RPM, gear, fuel) are never read, so nothing of the
+    # player can be shown as another driver's data. The whole payload is
+    # rebuilt every poll and keeps no state between cameras.
+    # ------------------------------------------------------------------
+
+    def _broadcast_driver_payload(self, reason: Optional[str], **fields: Any) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {
+            'available': reason is None, 'reason': reason,
+            'camera_car_idx': None, 'identity_available': False,
+            'name': None, 'car_number': None, 'class_id': None, 'class_name': None,
+            'position': None, 'class_position': None, 'laps_completed': None,
+            'last_lap_s': None, 'best_lap_s': None, 'on_pit_road': None,
+            'session_type': None, 'source': 'CamCarIdx',
+        }
+        payload.update(fields)
+        return payload
+
+    def _build_broadcast_driver_data(self) -> Optional[Dict[str, Any]]:
+        """Camera-followed driver card; None only if the builder itself fails.
+
+        A missing, negative, boolean, non-integral, non-finite or unknown
+        CamCarIdx is an unavailable card: it never falls back to PlayerCarIdx.
+        A car is known when DriverInfo lists it or the per-car arrays have a
+        slot for it; one missing from DriverInfo keeps its guarded statistics
+        with identity unavailable. Pace cars and spectators are unavailable
+        too, using the same roster filter as the standings.
+        """
+        try:
+            roster = self._get_standings_roster()
+            arrays = {key: self._car_array(key) for key in _BROADCAST_ARRAYS}
+            idx = self._strict_int(self._get_sdk_value('CamCarIdx', None))
+            slots = max(len(values) for values in arrays.values())
+            if idx is None or idx < 0 or (idx not in roster and idx >= slots):
+                return self._broadcast_driver_payload('camera_unavailable')
+            member = roster.get(idx, {})
+            if member.get('excluded'):
+                return self._broadcast_driver_payload('camera_target_excluded')
+
+            laps = self._strict_int(self._at(arrays['CarIdxLapCompleted'], idx))
+            pit = self._at(arrays['CarIdxOnPitRoad'], idx)
+            class_id = member.get('class_id')
+            return self._broadcast_driver_payload(
+                None, camera_car_idx=idx, identity_available=idx in roster,
+                name=member.get('name'), car_number=member.get('car_number'),
+                class_id=class_id, class_name=member.get('class_name'),
+                position=self._rank(self._at(arrays['CarIdxPosition'], idx)),
+                # A class rank means nothing once the class itself is unknown.
+                class_position=(self._rank(self._at(arrays['CarIdxClassPosition'], idx))
+                                if class_id is not None else None),
+                laps_completed=laps if laps is not None and laps >= 0 else None,
+                last_lap_s=self._lap_seconds(self._at(arrays['CarIdxLastLapTime'], idx)),
+                best_lap_s=self._lap_seconds(self._at(arrays['CarIdxBestLapTime'], idx)),
+                on_pit_road=pit if isinstance(pit, bool) else None,
+                session_type=self._read_race_timing()[0])
+        except Exception as e:
+            logging.debug(f"Broadcast driver data unavailable: {e}")
+            return None

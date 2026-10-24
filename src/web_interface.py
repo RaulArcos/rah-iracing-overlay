@@ -191,11 +191,19 @@ class WeatherNamespace(Namespace):
         logging.info("Client disconnected from weather namespace")
 
 
+class BroadcastDriverNamespace(Namespace):
+    def on_connect(self) -> None:
+        logging.info("Client connected to broadcast driver namespace")
+
+    def on_disconnect(self, *args: Any) -> None:
+        logging.info("Client disconnected from broadcast driver namespace")
+
+
 # Payload sections with a dedicated overlay event. They are kept out of the
 # legacy telemetry_update normalization, which would flatten them to 0.0.
 DEDICATED_PAYLOAD_KEYS = ('fuel_finish_data', 'session_strip_data',
                           'battle_pace_data', 'standings_data',
-                          'pit_assistant_data', 'weather_data')
+                          'pit_assistant_data', 'weather_data', 'broadcast_driver_data')
 
 
 class WebInterface:
@@ -307,6 +315,9 @@ class WebInterface:
             elif overlay == 'weather':
                 self.socketio.on_namespace(WeatherNamespace(f'/{overlay}'))
                 print(f"Registered weather namespace: {overlay}")
+            elif overlay == 'broadcast_driver':
+                self.socketio.on_namespace(BroadcastDriverNamespace(f'/{overlay}'))
+                print(f"Registered broadcast driver namespace: {overlay}")
 
         logging.info(f"Registered Socket.IO namespaces for overlays: {available_overlays}")
 
@@ -400,7 +411,9 @@ class WebInterface:
                 for key, event, namespace in (('battle_pace_data', 'battle_pace_update', '/battle_pace'),
                                               ('standings_data', 'standings_update', '/standings'),
                                               ('pit_assistant_data', 'pit_assistant_update', '/pit_assistant'),
-                                              ('weather_data', 'weather_update', '/weather')):
+                                              ('weather_data', 'weather_update', '/weather'),
+                                              ('broadcast_driver_data', 'broadcast_driver_update',
+                                               '/broadcast_driver')):
                     try:
                         self.socketio.emit(event, data.get(key), namespace=namespace)
                     except Exception as e:

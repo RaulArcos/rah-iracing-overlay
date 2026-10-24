@@ -37,6 +37,7 @@ OVERLAYS = [
     'standings',
     'pit_assistant',
     'weather',
+    'broadcast_driver',
 ]
 
 

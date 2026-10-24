@@ -1,0 +1,57 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0);
+}
+
+.bd-container {
+    width: 580px;
+    box-sizing: border-box;
+    cursor: move;
+    pointer-events: auto;
+    user-select: none;
+}
+
+.bd-identity {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.bd-number {
+    font-size: 26px;
+    font-weight: 700;
+}
+
+.bd-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 22px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* The shared stylesheet loads after this file, so the layout override needs
+   the compound selector to beat its .rah-grid rule. */
+.rah-grid.bd-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    row-gap: 10px;
+}
+
+.bd-text {
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.bd-footer {
+    margin-top: 10px;
+    font-size: 10px;
+    opacity: 0.7;
+}

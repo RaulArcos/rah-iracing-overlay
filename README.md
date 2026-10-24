@@ -88,6 +88,7 @@ Every overlay is discovered automatically by the launcher and can be opened as `
 | Multiclass Standings | `standings` | Overall and class rank per class group with laps, best/last lap, pit flag and race gaps ([details](docs/battle-standings.md)) |
 | Pit Assistant | `pit_assistant` | Read-only pit status, pit speed limit margin when the track reports one, repair/tow timers and requested service ([details](docs/pit-weather.md)) |
 | Weather | `weather` | Observed air/track temperature, humidity, wind, precipitation and track wetness; not a forecast ([details](docs/pit-weather.md)) |
+| Broadcast Driver Card | `broadcast_driver` | Lower-third card for the driver the broadcast camera follows: name, number, class, position, laps, last/best lap and pit status; never your own inputs ([details](docs/broadcast-driver.md)) |
 
 ## **Contributing**
 
