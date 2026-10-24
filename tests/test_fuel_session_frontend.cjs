@@ -346,6 +346,17 @@ test('new overlay stylesheets keep the original look as the default', () => {
     }
 });
 
+test('fuel grid layout beats the later-loaded shared .rah-grid rule (T7 computed-layout finding)', () => {
+    // Browser probe: with a plain `.fuel-grid` rule the shared `.rah-grid`
+    // (same specificity, loaded afterwards) won and rendered 3 columns
+    // instead of the designed 4. A compound selector wins on specificity.
+    const css = fs.readFileSync(path.join(repoRoot, 'src/overlays/fuel_finish/static/fuel_finish.css'), 'utf8');
+    assert.match(css, /\.rah-grid\.fuel-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
+    assert.doesNotMatch(css, /^\.fuel-grid\s*\{/m);
+    const html = fs.readFileSync(path.join(repoRoot, 'src/overlays/fuel_finish/fuel_finish.html'), 'utf8');
+    assert.match(html, /class="rah-grid fuel-grid"/);
+});
+
 test('fuel & session docs describe routes, units, sampling and live validation', () => {
     const docs = fs.readFileSync(path.join(repoRoot, 'docs/fuel-session.md'), 'utf8');
     for (const pattern of [

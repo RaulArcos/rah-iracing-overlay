@@ -56,6 +56,31 @@ Just open the .exe file like a normal windows program, you will be welcomed by a
   <img src=https://github.com/RaulArcos/rah-iracing-overlay/blob/development/images/interface_with_movement.png  width="600">
 </p>
 
+### **Development preview (from source)**
+
+To try the overlays, including the newer ones, without compiling:
+
+```bash
+pip install -r requirements.txt
+python src/app.py
+```
+
+This opens the launcher window and serves the overlays at `http://127.0.0.1:8085/`. Any overlay can also be used in a browser or an OBS browser source:
+
+| URL | Result |
+|-----|--------|
+| `http://127.0.0.1:8085/overlay/<name>` | Original RAH style (default) |
+| `http://127.0.0.1:8085/overlay/<name>?theme=glass` | Glass style |
+
+`<name>` is the folder name from the [Available overlays](#available-overlays) table, for example `fuel_finish`. The launcher has a theme selector that pins the chosen theme in the URL it opens; details in [docs/overlay-themes.md](docs/overlay-themes.md).
+
+A few things to know:
+
+- There is no hot reload. After changing Python code, restart `python src/app.py`; after changing HTML, CSS or JS, refresh the overlay page.
+- A precompiled `.exe` only contains what was built into it. It does not include source changes until you rebuild it (see [Compilation](#compilation)).
+- Overlays only show real values while iRacing is running. Without the simulator they stay in an empty state ("Waiting for data", "No data" or "--").
+- Validation commands and the manual iRacing / OBS checklist are in [docs/race-suite-validation.md](docs/race-suite-validation.md).
+
 ## Windows Security: DLL blocking after download (Mark-of-the-Web)
 
 Some Windows downloads add a security mark (`Zone.Identifier`) to extracted binaries. This may block runtime DLL loading (`Python.Runtime.dll`, WebView DLLs).

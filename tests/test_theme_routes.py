@@ -108,6 +108,7 @@ class ThemeRouteTestBase(unittest.TestCase):
 class TestCommonThemeAssets(ThemeRouteTestBase):
     def test_common_css_route_serves_shared_theme_stylesheet(self):
         response = self.client.get('/common/css/overlay-theme.css')
+        self.addCleanup(response.close)
         self.assertEqual(response.status_code, 200)
         self.assertIn('text/css', response.headers['Content-Type'])
         body = response.get_data(as_text=True)
@@ -116,6 +117,7 @@ class TestCommonThemeAssets(ThemeRouteTestBase):
 
     def test_common_js_route_serves_theme_runtime(self):
         response = self.client.get('/common/js/overlay_theme.js')
+        self.addCleanup(response.close)
         self.assertEqual(response.status_code, 200)
         self.assertIn('RAHOverlayTheme', response.get_data(as_text=True))
 

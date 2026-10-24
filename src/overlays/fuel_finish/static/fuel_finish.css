@@ -14,7 +14,8 @@ html, body {
     user-select: none;
 }
 
-.fuel-grid {
+/* Compound selector: the shared stylesheet loads later and also styles .rah-grid. */
+.rah-grid.fuel-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     row-gap: 12px;
 }
