@@ -72,7 +72,11 @@ so units exceed 400 lines rather than being split by file type.
 | T4 Battle & Pace, Standings | `f840359` | `43df659..f840359` | 2,491 |
 | T5 Pit Assistant, Weather | `572124c` | `f840359..572124c` | 1,635 |
 | T6 Broadcast Driver Card | `d4726ec` | `572124c..d4726ec` | 1,191 |
-| T7 integration tests and docs | pending | `d4726ec..` | see the tracker |
+| T7 software integration and fuel layout fix | `44067b3` | `d4726ec..44067b3` | 696 |
+
+The software integration slice is committed. **T7 is not closed:** the live
+SDK, desktop launcher and OBS checklist below still needs human validation or
+an explicit decision to accept those gaps for a source preview.
 
 ## The 13 overlays
 
