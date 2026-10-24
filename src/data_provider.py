@@ -29,6 +29,18 @@ _TIME_UNLIMITED_FROM_S = 604800.0
 _REFUEL_RISE_L = 0.1
 _FUEL_SAMPLE_WINDOW = 10
 
+# CarIdxF2Time is read as seconds behind the leader only while a race is
+# actually running (SessionInfo says Race and the state is one of these).
+_RACE_TIMING_STATES = ('racing', 'checkered')
+
+# Observed consecutive completed laps kept per car for pace and trend: a
+# pace needs two laps, a trend three. A fitted slope inside the steady band
+# (seconds per lap) is not called improving or worsening.
+_PACE_WINDOW = 5
+_PACE_MIN_LAPS = 2
+_TREND_MIN_LAPS = 3
+_TREND_STEADY_S = 0.05
+
 
 def _enum_names(enum_class: Any) -> Dict[int, str]:
     """Map the integer members of an irsdk enum class to their names."""
@@ -60,6 +72,7 @@ class DataProvider:
         self._lap_tracking_session: Optional[int] = None
         self._last_lap_seen: Optional[int] = None
         self._reset_fuel_sampling()
+        self._reset_pace_tracking()
         logging.debug(f"DataProvider initialized. Current working directory: {os.getcwd()}")
 
     def connect(self) -> bool:
@@ -139,7 +152,7 @@ class DataProvider:
             "steering_wheel_angle": steering,
         }
         
-        return {
+        data = {
             **base,
             **self._compute_overlay_metrics(),
             "relative_data": self._build_relative_data(),
@@ -152,6 +165,10 @@ class DataProvider:
             "fuel_finish_data": self._build_fuel_finish_data(),
             "session_strip_data": self._build_session_strip_data(),
         }
+        # Last: opponent lap observation must follow any lap-tracking reset
+        # triggered while the player's lap graph was built above.
+        data.update(self._build_race_overlay_data())
+        return data
 
     def _get_sdk_value(self, key: str, default: Any) -> Any:
         try:
@@ -623,6 +640,7 @@ class DataProvider:
         self._lap_tracking_session = None
         self._last_lap_seen = None
         self._reset_fuel_sampling()
+        self._reset_pace_tracking()
 
 
     def _update_lap_times(self) -> None:
@@ -964,3 +982,360 @@ class DataProvider:
         except Exception as e:
             logging.debug(f"Fuel data unavailable: {e}")
         return payload
+
+    # ------------------------------------------------------------------
+    # Standings and battle/pace
+    #
+    # Built from per-car SDK arrays that may be short, hold sentinels or
+    # NaN. Unknown stays None: ranks, names, classes, gaps and lap times are
+    # never inferred or zero-filled. Opponent lap observation keeps its own
+    # resettable state and never touches the player lap sampler above.
+    # ------------------------------------------------------------------
+
+    def _reset_pace_tracking(self) -> None:
+        self._pace_session: Optional[int] = None
+        # car idx -> completed laps at the last poll, consecutive observed
+        # lap times, and whether the car touched pit road during this lap.
+        self._pace_cars: Dict[int, Dict[str, Any]] = {}
+
+    def _car_array(self, key: str) -> List[Any]:
+        return self._safe_list(self._get_sdk_value(key, []))
+
+    def _at(self, values: List[Any], idx: int) -> Any:
+        """values[idx] for an in-range index, else None (never wraps negative)."""
+        return values[idx] if 0 <= idx < len(values) else None
+
+    def _rank(self, value: Any) -> Optional[int]:
+        rank = self._strict_int(value)
+        return rank if rank is not None and rank > 0 else None
+
+    def _lap_seconds(self, value: Any) -> Optional[float]:
+        """A real lap time; the SDK's -1/0 sentinels and NaN are unknown."""
+        if isinstance(value, bool):
+            return None
+        seconds = self._finite_or_none(value)
+        return round(seconds, 3) if seconds is not None and seconds > 0 else None
+
+    def _text_or_none(self, value: Any) -> Optional[str]:
+        if isinstance(value, bool) or not isinstance(value, (str, int)):
+            return None
+        return str(value).strip() or None
+
+    def _get_standings_roster(self) -> Dict[int, Dict[str, Any]]:
+        """CarIdx -> real DriverInfo identity and class; unknown fields are None.
+
+        Field names follow the published iRacing session YAML model
+        (IRSDKSharper IRacingSdkSessionInfo.cs): CarIdx, UserName, CarNumber,
+        CarClassID, CarClassShortName, CarIsPaceCar and IsSpectator. Pace cars
+        and spectators are marked excluded.
+        """
+        info = self._get_session_dict('DriverInfo')
+        if not info:
+            info = self._get_session_dict('SessionInfo').get('DriverInfo') or {}
+        drivers = info.get('Drivers') if isinstance(info, dict) else None
+        roster: Dict[int, Dict[str, Any]] = {}
+        for driver in drivers if isinstance(drivers, list) else []:
+            idx = self._strict_int(driver.get('CarIdx')) if isinstance(driver, dict) else None
+            if idx is None or idx < 0 or idx in roster:
+                continue
+            class_id = self._strict_int(driver.get('CarClassID'))
+            roster[idx] = {
+                'name': self._text_or_none(driver.get('UserName')),
+                'car_number': self._text_or_none(driver.get('CarNumber')),
+                'class_id': class_id if class_id is not None and class_id >= 0 else None,
+                'class_name': self._text_or_none(driver.get('CarClassShortName')),
+                'excluded': any(self._finite_or_none(driver.get(key))
+                                for key in ('CarIsPaceCar', 'IsSpectator')),
+            }
+        return roster
+
+    def _read_race_timing(self) -> tuple:
+        """(session type or None, whether race timing may be read).
+
+        The type comes only from SessionInfo for the current SessionNum; the
+        legacy _current_session_type default of 'Race' is not trusted here.
+        """
+        raw = (self._get_session_entry() or {}).get('SessionType')
+        session_type = raw.strip() if isinstance(raw, str) and raw.strip() else None
+        state = _SESSION_STATE_NAMES.get(self._strict_int(self._get_sdk_value('SessionState', None)))
+        confirmed = (session_type is not None and session_type.lower() == 'race'
+                     and state in _RACE_TIMING_STATES)
+        return session_type, confirmed
+
+    def _observe_pace_laps(self) -> None:
+        """Record each car's last lap time on observed completed-lap boundaries.
+
+        A lap is kept only when the completed-lap counter rose by exactly one
+        since the previous poll and the car stayed off pit road. First sight,
+        a skipped poll or a rollback only re-baselines, repeated polls add
+        nothing, and any unusable lap ends the consecutive run.
+        """
+        session_num = self._safe_int(self._get_sdk_value('SessionNum', 0))
+        if session_num != self._pace_session:
+            self._reset_pace_tracking()
+            self._pace_session = session_num
+        completed = self._car_array('CarIdxLapCompleted')
+        last_laps = self._car_array('CarIdxLastLapTime')
+        on_pit = self._car_array('CarIdxOnPitRoad')
+        seen = set()
+        for idx, raw_completed in enumerate(completed):
+            laps = self._strict_int(raw_completed)
+            if laps is None or laps < 0:
+                continue
+            seen.add(idx)
+            pit = bool(self._at(on_pit, idx))
+            state = self._pace_cars.get(idx)
+            if state is None or laps < state['laps_completed'] or laps > state['laps_completed'] + 1:
+                self._pace_cars[idx] = {'laps_completed': laps, 'times': [], 'pit': pit}
+            elif laps == state['laps_completed']:
+                state['pit'] = state['pit'] or pit
+            else:
+                lap_time = self._lap_seconds(self._at(last_laps, idx))
+                if lap_time is not None and not state['pit'] and not pit:
+                    state['times'].append(lap_time)
+                    del state['times'][:-_PACE_WINDOW]
+                else:
+                    state['times'] = []
+                state['laps_completed'] = laps
+                state['pit'] = pit
+        for idx in [idx for idx in self._pace_cars if idx not in seen]:
+            del self._pace_cars[idx]
+
+    def _pace_times(self, car_idx: int) -> List[float]:
+        return list(self._pace_cars.get(car_idx, {}).get('times', []))
+
+    def _summarize_pace(self, times: List[float]) -> Dict[str, Any]:
+        """Average and least-squares slope (s/lap) of observed consecutive laps."""
+        count = len(times)
+        mean = sum(times) / count if count else None
+        summary: Dict[str, Any] = {
+            'laps': count,
+            'avg_lap_s': round(mean, 3) if count >= _PACE_MIN_LAPS else None,
+            'trend_s_per_lap': None, 'trend': None,
+        }
+        if count >= _TREND_MIN_LAPS:
+            centre = (count - 1) / 2.0
+            slope = (sum((i - centre) * (t - mean) for i, t in enumerate(times))
+                     / sum((i - centre) ** 2 for i in range(count)))
+            summary['trend_s_per_lap'] = round(slope, 3)
+            summary['trend'] = ('improving' if slope <= -_TREND_STEADY_S else
+                                'worsening' if slope >= _TREND_STEADY_S else 'steady')
+        return summary
+
+    def _pace_delta(self, car: Dict[str, Any], player: Dict[str, Any]) -> Optional[float]:
+        """Opponent minus player mean over the laps both have observed."""
+        theirs = self._pace_times(car['car_idx'])
+        mine = self._pace_times(player['car_idx'])
+        shared = min(len(theirs), len(mine))
+        if shared < _PACE_MIN_LAPS:
+            return None
+        return round(sum(theirs[-shared:]) / shared - sum(mine[-shared:]) / shared, 3)
+
+    def _build_field(self) -> Dict[str, Any]:
+        """Every classified car with validated rank, identity, class and timing."""
+        player_idx = self._strict_int(self._get_sdk_value('PlayerCarIdx', None))
+        positions = self._car_array('CarIdxPosition')
+        class_positions = self._car_array('CarIdxClassPosition')
+        completed = self._car_array('CarIdxLapCompleted')
+        lap_pct = self._car_array('CarIdxLapDistPct')
+        f2_times = self._car_array('CarIdxF2Time')
+        best_laps = self._car_array('CarIdxBestLapTime')
+        last_laps = self._car_array('CarIdxLastLapTime')
+        on_pit = self._car_array('CarIdxOnPitRoad')
+        roster = self._get_standings_roster()
+        session_type, race_timing = self._read_race_timing()
+        is_race = session_type is not None and session_type.lower() == 'race'
+
+        cars: List[Dict[str, Any]] = []
+        for idx in range(max(len(positions), len(best_laps))):
+            member = roster.get(idx, {})
+            if member.get('excluded'):
+                continue
+            position = self._rank(self._at(positions, idx))
+            best = self._lap_seconds(self._at(best_laps, idx))
+            # A race lists ranked cars only; other sessions also list cars
+            # that merely have a best lap, ordered by that lap.
+            if position is None and (is_race or best is None):
+                continue
+            laps = self._strict_int(self._at(completed, idx))
+            laps = laps if laps is not None and laps >= 0 else None
+            pct = self._finite_or_none(self._at(lap_pct, idx))
+            pct = pct if pct is not None and 0.0 <= pct <= 1.0 else None
+            f2 = self._finite_or_none(self._at(f2_times, idx))
+            pit = self._at(on_pit, idx)
+            class_id = member.get('class_id')
+            cars.append({
+                'car_idx': idx,
+                'position': position,
+                # A class rank means nothing once the class itself is unknown.
+                'class_position': self._rank(self._at(class_positions, idx)) if class_id is not None else None,
+                'car_number': member.get('car_number'),
+                'name': member.get('name'),
+                'class_id': class_id,
+                'class_name': member.get('class_name'),
+                'laps_completed': laps,
+                'progress': laps + pct if laps is not None and pct is not None else None,
+                'f2_time': f2 if f2 is not None and f2 >= 0 else None,
+                'best_lap_s': best,
+                'last_lap_s': self._lap_seconds(self._at(last_laps, idx)),
+                'on_pit_road': None if pit is None else bool(pit),
+                'is_player': player_idx is not None and idx == player_idx,
+                'gap_to_leader_s': None, 'laps_down': None,
+                'interval_s': None, 'best_lap_delta_s': None,
+                # Private: F2Time as a race time, comparable only between cars
+                # less than a lap apart. Never part of a payload.
+                'race_time_s': None,
+            })
+
+        leader = next((car for car in cars if car['position'] == 1), None)
+        if race_timing and leader is not None:
+            for car in cars:
+                self._apply_leader_gap(car, leader)
+        return {'cars': cars, 'session_type': session_type,
+                'gap_basis': 'race_f2time' if race_timing else None}
+
+    def _apply_leader_gap(self, car: Dict[str, Any], leader: Dict[str, Any]) -> None:
+        """Laps down and, on the leader's lap, CarIdxF2Time as seconds behind.
+
+        F2Time only means time behind the leader for a car less than a lap
+        down; a lapped car gets a lap count and no time. Progress is compared
+        directly, so there is no modulo wrap to turn a lapped car into a
+        negative time.
+        """
+        if car['progress'] is None or leader['progress'] is None:
+            return
+        car['laps_down'] = int(max(leader['progress'] - car['progress'], 0.0))
+        if car is leader:
+            car['gap_to_leader_s'] = 0.0
+            car['race_time_s'] = 0.0
+        elif car['f2_time'] is not None and car['f2_time'] > 0:
+            car['race_time_s'] = car['f2_time']
+            if car['laps_down'] == 0:
+                car['gap_to_leader_s'] = round(car['f2_time'], 3)
+
+    def _time_between(self, ahead: Dict[str, Any], behind: Dict[str, Any]) -> Optional[float]:
+        """Seconds from the car ahead to the car behind, when both are timed.
+
+        The two cars' CarIdxF2Time values are only comparable while the pair
+        is less than one lap apart, judged from the pair's own race progress
+        (never from class rank and never from each car's deficit to the
+        overall leader: equal or different whole-lap deficits to the leader
+        say nothing about the pair). Progress must put `ahead` in front, so a
+        class order that contradicts progress is never turned into a time.
+        """
+        if ahead['race_time_s'] is None or behind['race_time_s'] is None:
+            return None
+        if ahead['progress'] is None or behind['progress'] is None:
+            return None
+        distance = ahead['progress'] - behind['progress']
+        if not 0.0 <= distance < 1.0:
+            return None
+        seconds = behind['race_time_s'] - ahead['race_time_s']
+        return round(seconds, 3) if seconds >= 0 else None
+
+    def _delta(self, other: Optional[float], mine: Optional[float]) -> Optional[float]:
+        return round(other - mine, 3) if other is not None and mine is not None else None
+
+    def _build_standings_data(self, field: Dict[str, Any]) -> Dict[str, Any]:
+        members: Dict[Any, List[Dict[str, Any]]] = {}
+        for car in field['cars']:
+            members.setdefault(car['class_id'], []).append(car)
+
+        classes = []
+        for class_id, cars in members.items():
+            known = class_id is not None
+            # Unknown-class cars mix real classes, so they follow overall rank.
+            rank_key = 'class_position' if known else 'position'
+            cars.sort(key=lambda c: (c[rank_key] is None, c[rank_key] or 0,
+                                     c['position'] is None, c['position'] or 0,
+                                     c['best_lap_s'] is None, c['best_lap_s'] or 0.0, c['car_idx']))
+            if known:
+                class_best = min((c['best_lap_s'] for c in cars if c['best_lap_s'] is not None), default=None)
+                for i, car in enumerate(cars):
+                    car['best_lap_delta_s'] = self._delta(car['best_lap_s'], class_best)
+                    if i:
+                        car['interval_s'] = self._time_between(cars[i - 1], car)
+            classes.append({
+                'class_id': class_id,
+                'class_name': next((c['class_name'] for c in cars if c['class_name']), None),
+                'known': known,
+                'cars': [{key: car[key] for key in (
+                    'car_idx', 'position', 'class_position', 'car_number', 'name', 'laps_completed',
+                    'best_lap_s', 'last_lap_s', 'best_lap_delta_s', 'on_pit_road', 'is_player',
+                    'gap_to_leader_s', 'laps_down', 'interval_s')} for car in cars],
+            })
+        classes.sort(key=lambda g: (
+            not g['known'],
+            min((c['position'] for c in g['cars'] if c['position'] is not None), default=math.inf),
+            min((c['best_lap_s'] for c in g['cars'] if c['best_lap_s'] is not None), default=math.inf)))
+
+        player = next((car for car in field['cars'] if car['is_player']), None)
+        return {
+            'session_type': field['session_type'],
+            'gap_basis': field['gap_basis'],
+            'player_car_idx': player['car_idx'] if player else None,
+            'classes': classes,
+        }
+
+    def _battle_entry(self, car: Dict[str, Any]) -> Dict[str, Any]:
+        entry = {key: car[key] for key in (
+            'car_idx', 'name', 'car_number', 'position', 'class_position', 'laps_completed',
+            'last_lap_s', 'best_lap_s', 'on_pit_road', 'laps_down')}
+        entry['pace'] = self._summarize_pace(self._pace_times(car['car_idx']))
+        return entry
+
+    def _build_battle_pace_data(self, field: Dict[str, Any]) -> Dict[str, Any]:
+        """Same-class neighbours around the player; opponent minus player deltas."""
+        payload: Dict[str, Any] = {
+            'session_type': field['session_type'], 'gap_basis': field['gap_basis'],
+            'context': 'player_unavailable', 'class_id': None, 'class_name': None,
+            'lap_time_source': 'CarIdxLastLapTime/CarIdxBestLapTime',
+            'player': None, 'ahead': None, 'behind': None,
+        }
+        player = next((car for car in field['cars'] if car['is_player']), None)
+        if player is None:
+            return payload
+        payload['player'] = self._battle_entry(player)
+        if player['class_id'] is None:
+            payload['context'] = 'class_unknown'
+            return payload
+        payload['class_id'] = player['class_id']
+        payload['class_name'] = player['class_name']
+        if player['class_position'] is None:
+            payload['context'] = 'class_position_unavailable'
+            return payload
+        payload['context'] = 'ok'
+
+        def neighbour(rank: int) -> Optional[Dict[str, Any]]:
+            matches = [c for c in field['cars']
+                       if c['class_id'] == player['class_id'] and c['class_position'] == rank]
+            return matches[0] if len(matches) == 1 else None
+
+        for role, rival in (('ahead', neighbour(player['class_position'] - 1)),
+                            ('behind', neighbour(player['class_position'] + 1))):
+            if rival is None:
+                continue
+            entry = self._battle_entry(rival)
+            entry['gap_s'] = (self._time_between(rival, player) if role == 'ahead'
+                              else self._time_between(player, rival))
+            entry['last_lap_delta_s'] = self._delta(rival['last_lap_s'], player['last_lap_s'])
+            entry['best_lap_delta_s'] = self._delta(rival['best_lap_s'], player['best_lap_s'])
+            entry['pace_delta_s'] = self._pace_delta(rival, player)
+            payload[role] = entry
+        return payload
+
+    def _build_race_overlay_data(self) -> Dict[str, Any]:
+        """standings_data and battle_pace_data; None when they cannot be built."""
+        payloads: Dict[str, Any] = {'standings_data': None, 'battle_pace_data': None}
+        try:
+            self._observe_pace_laps()
+        except Exception as e:
+            logging.debug(f"Opponent pace tracking reset after error: {e}")
+            self._reset_pace_tracking()
+        try:
+            field = self._build_field()
+            payloads['standings_data'] = self._build_standings_data(field)
+            payloads['battle_pace_data'] = self._build_battle_pace_data(field)
+        except Exception as e:
+            logging.debug(f"Standings/battle data unavailable: {e}")
+        return payloads

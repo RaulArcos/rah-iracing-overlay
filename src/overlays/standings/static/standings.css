@@ -1,0 +1,69 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0);
+}
+
+.standings-container {
+    width: 620px;
+    box-sizing: border-box;
+    cursor: move;
+    pointer-events: auto;
+    user-select: none;
+}
+
+/* Compound selector: the shared stylesheet loads later and also styles .rah-row. */
+.rah-row.st-row {
+    display: grid;
+    grid-template-columns: 34px 34px 44px minmax(0, 1fr) 34px 74px 74px 66px 62px 30px;
+    column-gap: 6px;
+    align-items: center;
+    font-size: 12px;
+}
+
+.rah-row.st-row > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rah-row.st-head {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.7;
+}
+
+.rah-row.st-row--player {
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.10);
+    border-radius: 4px;
+}
+
+.st-group-title {
+    margin-top: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.85;
+}
+
+.st-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.10);
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+.st-note {
+    font-size: 10px;
+    opacity: 0.75;
+}

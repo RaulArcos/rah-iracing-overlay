@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Multiclass Standings Overlay</title>
+    <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='standings', filename='standings.css') }}">
+    <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='overlay-theme.css') }}">
+    <script src="{{ url_for('serve_common_js', filename='overlay_theme.js') }}"></script>
+    <script src="{{ url_for('overlays.serve_static', overlay_name='standings', filename='standings.js') }}"></script>
+    <script src="{{ url_for('serve_common_js', filename='socket.io.min.js') }}"></script>
+</head>
+<body>
+    <div class="standings-container rah-card pywebview-drag-region">
+        <div class="rah-card__header">
+            <span>Standings <span id="st-session">--</span></span>
+            <span id="st-status" class="rah-status rah-status--warn">Waiting for data</span>
+        </div>
+        <div class="rah-row st-row st-head">
+            <span>Pos</span><span>Cls</span><span>#</span><span>Driver</span><span>Lap</span>
+            <span>Best</span><span>Last</span><span>Gap</span><span>Int</span><span></span>
+        </div>
+        <div id="st-groups"></div>
+        <div class="st-footer">
+            <span id="st-basis">--</span>
+            <span class="st-note">Gap: seconds behind the overall leader. Int: to the car ahead in the class.</span>
+        </div>
+    </div>
+</body>
+</html>

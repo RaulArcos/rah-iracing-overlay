@@ -33,6 +33,8 @@ OVERLAYS = [
     'laptime_graph',
     'fuel_finish',
     'session_strip',
+    'battle_pace',
+    'standings',
 ]
 
 

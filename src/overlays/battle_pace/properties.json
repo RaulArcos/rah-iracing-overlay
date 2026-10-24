@@ -1,0 +1,16 @@
+{
+    "name": "battle_pace",
+    "display_name": "Battle & Pace",
+    "description": "Same-class car ahead and behind with race gap, last/best lap comparison and a trend from observed consecutive laps.",
+    "resolution": {
+        "width": 640,
+        "height": 330
+    },
+    "position": {
+        "x": 0,
+        "y": 0
+    },
+    "dpi_info": {
+        "scale": 1
+    }
+}

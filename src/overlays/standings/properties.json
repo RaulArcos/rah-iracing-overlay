@@ -1,0 +1,16 @@
+{
+    "name": "standings",
+    "display_name": "Multiclass Standings",
+    "description": "Overall and class rank per class group with best/last lap, pit flag and race gaps from real iRacing timing (laps down when lapped).",
+    "resolution": {
+        "width": 660,
+        "height": 560
+    },
+    "position": {
+        "x": 0,
+        "y": 0
+    },
+    "dpi_info": {
+        "scale": 1
+    }
+}

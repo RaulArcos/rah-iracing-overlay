@@ -1,0 +1,57 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0);
+}
+
+.battle-container {
+    width: 600px;
+    box-sizing: border-box;
+    cursor: move;
+    pointer-events: auto;
+    user-select: none;
+}
+
+/* Compound selector: the shared stylesheet loads later and also styles .rah-grid. */
+.rah-grid.battle-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.bp-col {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    font-size: 12px;
+}
+
+.bp-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.bp-pos {
+    margin-bottom: 4px;
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+.battle-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.10);
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+.battle-note {
+    font-size: 10px;
+    opacity: 0.75;
+}

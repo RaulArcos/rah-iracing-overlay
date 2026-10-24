@@ -159,9 +159,26 @@ class SessionStripNamespace(Namespace):
         logging.info("Client disconnected from session strip namespace")
 
 
+class BattlePaceNamespace(Namespace):
+    def on_connect(self) -> None:
+        logging.info("Client connected to battle pace namespace")
+
+    def on_disconnect(self, *args: Any) -> None:
+        logging.info("Client disconnected from battle pace namespace")
+
+
+class StandingsNamespace(Namespace):
+    def on_connect(self) -> None:
+        logging.info("Client connected to standings namespace")
+
+    def on_disconnect(self, *args: Any) -> None:
+        logging.info("Client disconnected from standings namespace")
+
+
 # Payload sections with a dedicated overlay event. They are kept out of the
 # legacy telemetry_update normalization, which would flatten them to 0.0.
-DEDICATED_PAYLOAD_KEYS = ('fuel_finish_data', 'session_strip_data')
+DEDICATED_PAYLOAD_KEYS = ('fuel_finish_data', 'session_strip_data',
+                          'battle_pace_data', 'standings_data')
 
 
 class WebInterface:
@@ -261,6 +278,12 @@ class WebInterface:
             elif overlay == 'session_strip':
                 self.socketio.on_namespace(SessionStripNamespace(f'/{overlay}'))
                 print(f"Registered session strip namespace: {overlay}")
+            elif overlay == 'battle_pace':
+                self.socketio.on_namespace(BattlePaceNamespace(f'/{overlay}'))
+                print(f"Registered battle pace namespace: {overlay}")
+            elif overlay == 'standings':
+                self.socketio.on_namespace(StandingsNamespace(f'/{overlay}'))
+                print(f"Registered standings namespace: {overlay}")
 
         logging.info(f"Registered Socket.IO namespaces for overlays: {available_overlays}")
 
@@ -349,6 +372,14 @@ class WebInterface:
                     self.socketio.emit('session_strip_update', data.get('session_strip_data'), namespace='/session_strip')
                 except Exception as e:
                     logging.error(f"Error emitting fuel/session overlays: {e}")
+
+                # Same nullable contract; one failing emit never blocks the other.
+                for key, event, namespace in (('battle_pace_data', 'battle_pace_update', '/battle_pace'),
+                                              ('standings_data', 'standings_update', '/standings')):
+                    try:
+                        self.socketio.emit(event, data.get(key), namespace=namespace)
+                    except Exception as e:
+                        logging.error(f"Error emitting {event}: {e}")
                 
         except Exception as e:
             logging.error(f"Error in telemetry processing: {e}")
