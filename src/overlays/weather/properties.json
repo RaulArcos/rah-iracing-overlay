@@ -1,0 +1,16 @@
+{
+    "name": "weather",
+    "display_name": "Weather",
+    "description": "Observed air and track temperature, humidity, wind, precipitation and track wetness from the iRacing SDK (not a forecast).",
+    "resolution": {
+        "width": 460,
+        "height": 260
+    },
+    "position": {
+        "x": 0,
+        "y": 0
+    },
+    "dpi_info": {
+        "scale": 1
+    }
+}

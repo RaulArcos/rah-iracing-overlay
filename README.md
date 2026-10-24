@@ -86,6 +86,8 @@ Every overlay is discovered automatically by the launcher and can be opened as `
 | Session Strip | `session_strip` | Session type, laps/time remaining, state, flag and position ([details](docs/fuel-session.md)) |
 | Battle & Pace | `battle_pace` | Same-class car ahead/behind, race gap, last/best lap comparison and observed lap trend ([details](docs/battle-standings.md)) |
 | Multiclass Standings | `standings` | Overall and class rank per class group with laps, best/last lap, pit flag and race gaps ([details](docs/battle-standings.md)) |
+| Pit Assistant | `pit_assistant` | Read-only pit status, pit speed limit margin when the track reports one, repair/tow timers and requested service ([details](docs/pit-weather.md)) |
+| Weather | `weather` | Observed air/track temperature, humidity, wind, precipitation and track wetness; not a forecast ([details](docs/pit-weather.md)) |
 
 ## **Contributing**
 

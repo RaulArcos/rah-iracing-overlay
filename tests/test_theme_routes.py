@@ -35,6 +35,8 @@ OVERLAYS = [
     'session_strip',
     'battle_pace',
     'standings',
+    'pit_assistant',
+    'weather',
 ]
 
 

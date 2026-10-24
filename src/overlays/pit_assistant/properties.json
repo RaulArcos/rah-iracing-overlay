@@ -1,0 +1,16 @@
+{
+    "name": "pit_assistant",
+    "display_name": "Pit Assistant",
+    "description": "Read-only pit status, pit speed limit margin (when the track reports one), repair/tow timers and the requested pit service.",
+    "resolution": {
+        "width": 560,
+        "height": 300
+    },
+    "position": {
+        "x": 0,
+        "y": 0
+    },
+    "dpi_info": {
+        "scale": 1
+    }
+}

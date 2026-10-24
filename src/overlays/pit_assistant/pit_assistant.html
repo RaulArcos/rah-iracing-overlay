@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pit Assistant Overlay</title>
+    <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='pit_assistant', filename='pit_assistant.css') }}">
+    <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='overlay-theme.css') }}">
+    <script src="{{ url_for('serve_common_js', filename='overlay_theme.js') }}"></script>
+    <script src="{{ url_for('overlays.serve_static', overlay_name='pit_assistant', filename='pit_assistant.js') }}"></script>
+    <script src="{{ url_for('serve_common_js', filename='socket.io.min.js') }}"></script>
+</head>
+<body>
+    <div class="pit-container rah-card pywebview-drag-region">
+        <div class="rah-card__header">
+            <span>Pit Assistant</span>
+            <span id="pit-status" class="rah-status rah-status--warn">Waiting for data</span>
+        </div>
+        <div class="rah-grid pit-grid">
+            <div class="rah-metric">
+                <span class="rah-metric__label">Speed km/h</span>
+                <span class="rah-metric__value rah-num" id="pit-speed">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Pit limit km/h</span>
+                <span class="rah-metric__value rah-num" id="pit-limit">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Margin km/h</span>
+                <span class="rah-metric__value rah-num" id="pit-margin">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Limit</span>
+                <span class="rah-status" id="pit-limit-state">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Pit road</span>
+                <span class="rah-status" id="pit-road">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">In stall</span>
+                <span class="rah-status" id="pit-stall">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Pits</span>
+                <span class="rah-status" id="pit-open">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Service</span>
+                <span class="rah-status" id="pit-service">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Repair s</span>
+                <span class="rah-metric__value rah-num" id="pit-repair">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Optional s</span>
+                <span class="rah-metric__value rah-num" id="pit-opt-repair">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Tow s</span>
+                <span class="rah-metric__value rah-num" id="pit-tow">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Service status</span>
+                <span class="rah-metric__value pit-text" id="pit-svstatus">—</span>
+            </div>
+            <div class="rah-metric pit-wide">
+                <span class="rah-metric__label">Requested items</span>
+                <span class="rah-metric__value pit-text" id="pit-flags">—</span>
+            </div>
+            <div class="rah-metric pit-wide">
+                <span class="rah-metric__label">Fuel add (requested)</span>
+                <span class="rah-metric__value pit-text rah-num" id="pit-fuel">—</span>
+            </div>
+        </div>
+        <div class="pit-footer">Read-only: nothing is sent to the simulator. Fuel is the requested amount, not fuel added.</div>
+    </div>
+</body>
+</html>

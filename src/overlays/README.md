@@ -188,6 +188,9 @@ examples that also show a dedicated nullable event and an explicit
 unavailable/disconnected state (see `docs/fuel-session.md`).
 `battle_pace` and `standings` show a list-style layout built from per-car SDK
 arrays with guarded, class-aware data (see `docs/battle-standings.md`).
+`pit_assistant` and `weather` are read-only card layouts with a custom grid
+(a compound `.rah-grid.pit-grid` selector, because the shared stylesheet loads
+later); see `docs/pit-weather.md`.
 
 ### 6. Modify web_interface.py to register your namespace
 

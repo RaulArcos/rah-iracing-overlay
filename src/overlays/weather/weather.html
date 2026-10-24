@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Weather Overlay</title>
+    <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='weather', filename='weather.css') }}">
+    <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='overlay-theme.css') }}">
+    <script src="{{ url_for('serve_common_js', filename='overlay_theme.js') }}"></script>
+    <script src="{{ url_for('overlays.serve_static', overlay_name='weather', filename='weather.js') }}"></script>
+    <script src="{{ url_for('serve_common_js', filename='socket.io.min.js') }}"></script>
+</head>
+<body>
+    <div class="weather-container rah-card pywebview-drag-region">
+        <div class="rah-card__header">
+            <span>Weather</span>
+            <span id="wx-status" class="rah-status rah-status--warn">Waiting for data</span>
+        </div>
+        <div class="rah-grid weather-grid">
+            <div class="rah-metric">
+                <span class="rah-metric__label">Air °C</span>
+                <span class="rah-metric__value rah-num" id="wx-air">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Track °C</span>
+                <span class="rah-metric__value rah-num" id="wx-track">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Humidity</span>
+                <span class="rah-metric__value rah-num" id="wx-humidity">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Wind km/h</span>
+                <span class="rah-metric__value rah-num" id="wx-wind">—</span>
+                <span class="rah-metric__unit" id="wx-wind-ms">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Wind dir</span>
+                <span class="rah-metric__value rah-num" id="wx-wind-dir">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Precipitation</span>
+                <span class="rah-metric__value rah-num" id="wx-precip">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Track wetness</span>
+                <span class="rah-metric__value weather-text" id="wx-wetness">—</span>
+            </div>
+            <div class="rah-metric">
+                <span class="rah-metric__label">Declared wet</span>
+                <span class="rah-status" id="wx-declared">—</span>
+            </div>
+        </div>
+        <div class="weather-footer">Observed at the start/finish line, not a forecast. Wind direction is the SDK angle in degrees.</div>
+    </div>
+</body>
+</html>

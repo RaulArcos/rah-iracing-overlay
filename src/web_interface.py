@@ -175,10 +175,27 @@ class StandingsNamespace(Namespace):
         logging.info("Client disconnected from standings namespace")
 
 
+class PitAssistantNamespace(Namespace):
+    def on_connect(self) -> None:
+        logging.info("Client connected to pit assistant namespace")
+
+    def on_disconnect(self, *args: Any) -> None:
+        logging.info("Client disconnected from pit assistant namespace")
+
+
+class WeatherNamespace(Namespace):
+    def on_connect(self) -> None:
+        logging.info("Client connected to weather namespace")
+
+    def on_disconnect(self, *args: Any) -> None:
+        logging.info("Client disconnected from weather namespace")
+
+
 # Payload sections with a dedicated overlay event. They are kept out of the
 # legacy telemetry_update normalization, which would flatten them to 0.0.
 DEDICATED_PAYLOAD_KEYS = ('fuel_finish_data', 'session_strip_data',
-                          'battle_pace_data', 'standings_data')
+                          'battle_pace_data', 'standings_data',
+                          'pit_assistant_data', 'weather_data')
 
 
 class WebInterface:
@@ -284,6 +301,12 @@ class WebInterface:
             elif overlay == 'standings':
                 self.socketio.on_namespace(StandingsNamespace(f'/{overlay}'))
                 print(f"Registered standings namespace: {overlay}")
+            elif overlay == 'pit_assistant':
+                self.socketio.on_namespace(PitAssistantNamespace(f'/{overlay}'))
+                print(f"Registered pit assistant namespace: {overlay}")
+            elif overlay == 'weather':
+                self.socketio.on_namespace(WeatherNamespace(f'/{overlay}'))
+                print(f"Registered weather namespace: {overlay}")
 
         logging.info(f"Registered Socket.IO namespaces for overlays: {available_overlays}")
 
@@ -375,7 +398,9 @@ class WebInterface:
 
                 # Same nullable contract; one failing emit never blocks the other.
                 for key, event, namespace in (('battle_pace_data', 'battle_pace_update', '/battle_pace'),
-                                              ('standings_data', 'standings_update', '/standings')):
+                                              ('standings_data', 'standings_update', '/standings'),
+                                              ('pit_assistant_data', 'pit_assistant_update', '/pit_assistant'),
+                                              ('weather_data', 'weather_update', '/weather')):
                     try:
                         self.socketio.emit(event, data.get(key), namespace=namespace)
                     except Exception as e:

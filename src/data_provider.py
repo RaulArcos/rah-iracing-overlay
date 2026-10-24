@@ -52,6 +52,15 @@ def _enum_names(enum_class: Any) -> Dict[int, str]:
 _SESSION_STATE_NAMES = {
     code: name for code, name in _enum_names(getattr(irsdk, 'SessionState', object)).items() if code != 0}
 _SESSION_FLAG_NAMES = _enum_names(getattr(irsdk, 'Flags', object))
+_PIT_SERVICE_FLAG_NAMES = _enum_names(getattr(irsdk, 'PitSvFlags', object))
+_PIT_SERVICE_STATUS_NAMES = _enum_names(getattr(irsdk, 'PitSvStatus', object))
+_TRACK_WETNESS_NAMES = _enum_names(getattr(irsdk, 'TrackWetness', object))
+
+# WeekendInfo.TrackPitSpeedLimit is a string such as "60.00 kph" (typed string
+# in IRSDKSharper IRacingSdkSessionInfo.cs). Only a value that states its own
+# unit is trusted; the factor converts that unit to km/h.
+_PIT_LIMIT_RE = re.compile(r'^([0-9]*\.?[0-9]+)\s*(kph|km/h|mph|m/s)$', re.IGNORECASE)
+_TO_KMH = {'kph': 1.0, 'km/h': 1.0, 'mph': 1.609344, 'm/s': 3.6}
 
 
 class DataProvider:
@@ -164,6 +173,8 @@ class DataProvider:
             # sampling) advances inside _build_laptime_graph_data.
             "fuel_finish_data": self._build_fuel_finish_data(),
             "session_strip_data": self._build_session_strip_data(),
+            "pit_assistant_data": self._build_pit_assistant_data(),
+            "weather_data": self._build_weather_data(),
         }
         # Last: opponent lap observation must follow any lap-tracking reset
         # triggered while the player's lap graph was built above.
@@ -981,6 +992,125 @@ class DataProvider:
                     payload['finish_fuel_to_add_l'] = round(max(needed - level, 0.0), 3)
         except Exception as e:
             logging.debug(f"Fuel data unavailable: {e}")
+        return payload
+
+    # ------------------------------------------------------------------
+    # Pit Assistant and Weather payloads
+    #
+    # Read-only observations of SDK variables (names and units from
+    # kutu/pyirsdk vars.txt). Missing, non-finite, negative or mistyped
+    # values are None; a real 0 or False is kept. Nothing is commanded,
+    # forecast or defaulted to a pleasant value.
+    # ------------------------------------------------------------------
+
+    def _sdk_number(self, value: Any, minimum: Optional[float] = None, scale: float = 1.0) -> Optional[float]:
+        """A finite number from a numeric SDK value, times scale; bools and text are not numbers.
+
+        A product that overflows to inf is unavailable, never sent as inf.
+        """
+        if isinstance(value, (bool, str)):
+            return None
+        number = self._finite_or_none(value)
+        if number is None or (minimum is not None and number < minimum):
+            return None
+        return self._finite_or_none(number * scale)
+
+    def _sdk_bool(self, key: str) -> Optional[bool]:
+        value = self._get_sdk_value(key, None)
+        return value if isinstance(value, bool) else None
+
+    def _percent_from_fraction(self, key: str) -> Optional[float]:
+        """An SDK 0..1 ratio as percent; anything outside 0..1 is not rescaled."""
+        fraction = self._sdk_number(self._get_sdk_value(key, None), 0.0)
+        return round(fraction * 100.0, 2) if fraction is not None and fraction <= 1.0 else None
+
+    def _pit_speed_limit_kmh(self) -> Optional[float]:
+        raw = self._get_session_dict('WeekendInfo').get('TrackPitSpeedLimit')
+        match = _PIT_LIMIT_RE.match(raw.strip()) if isinstance(raw, str) else None
+        if match is None:
+            return None
+        limit = float(match.group(1)) * _TO_KMH[match.group(2).lower()]
+        return round(limit, 3) if limit > 0 else None
+
+    def _build_pit_assistant_data(self) -> Dict[str, Any]:
+        """Pit Assistant payload: observed pit status, limit margin and service request."""
+        payload: Dict[str, Any] = {
+            'speed_kmh': None,
+            'on_pit_road': None, 'in_pit_stall': None, 'pits_open': None, 'service_active': None,
+            'pit_speed_limit_kmh': None, 'pit_speed_limit_source': None,
+            'pit_speed_margin_kmh': None, 'pit_speed_state': None,
+            'repair_left_s': None, 'optional_repair_left_s': None, 'tow_time_s': None,
+            'service_flags': None, 'service_flags_raw': None,
+            'service_status': None, 'service_status_code': None,
+            # PitSvFuel is liters or kWh depending on the car and the SDK does
+            # not say which, so the amount keeps the SDK's own unit label.
+            'service_fuel_amount': None, 'service_fuel_unit': 'L/kWh',
+            'service_fuel_requested': None,
+            'read_only': True,
+        }
+        try:
+            speed = self._sdk_number(self._get_sdk_value('Speed', None), 0.0, 3.6)
+            payload['speed_kmh'] = round(speed, 3) if speed is not None else None
+            for key, var in (('on_pit_road', 'OnPitRoad'), ('in_pit_stall', 'PlayerCarInPitStall'),
+                             ('pits_open', 'PitsOpen'), ('service_active', 'PitstopActive')):
+                payload[key] = self._sdk_bool(var)
+            for key, var in (('repair_left_s', 'PitRepairLeft'), ('optional_repair_left_s', 'PitOptRepairLeft'),
+                             ('tow_time_s', 'PlayerCarTowTime'), ('service_fuel_amount', 'PitSvFuel')):
+                payload[key] = self._sdk_number(self._get_sdk_value(var, None), 0.0)
+
+            limit = self._pit_speed_limit_kmh()
+            if limit is not None:
+                payload['pit_speed_limit_kmh'] = limit
+                payload['pit_speed_limit_source'] = 'WeekendInfo.TrackPitSpeedLimit'
+                # The limit only applies on pit road, so there is no margin elsewhere.
+                if payload['on_pit_road'] is True and payload['speed_kmh'] is not None:
+                    margin = round(limit - payload['speed_kmh'], 3)
+                    payload['pit_speed_margin_kmh'] = margin
+                    payload['pit_speed_state'] = 'over_limit' if margin < 0 else 'within_limit'
+
+            flags = self._strict_int(self._get_sdk_value('PitSvFlags', None))
+            if flags is not None and flags >= 0:
+                payload['service_flags_raw'] = flags
+                payload['service_flags'] = [name for bit, name in sorted(_PIT_SERVICE_FLAG_NAMES.items())
+                                            if flags & bit]
+                payload['service_fuel_requested'] = 'fuel_fill' in payload['service_flags']
+            status = self._strict_int(self._get_sdk_value('PlayerCarPitSvStatus', None))
+            if status is not None:
+                payload['service_status_code'] = status
+                payload['service_status'] = _PIT_SERVICE_STATUS_NAMES.get(status)
+        except Exception as e:
+            logging.debug(f"Pit assistant data unavailable: {e}")
+        return payload
+
+    def _build_weather_data(self) -> Dict[str, Any]:
+        """Weather payload: conditions observed at the start/finish line, never a forecast."""
+        payload: Dict[str, Any] = {
+            'air_temp_c': None, 'track_temp_c': None, 'humidity_pct': None,
+            'wind_speed_ms': None, 'wind_speed_kmh': None, 'wind_dir_deg': None,
+            'precipitation_pct': None, 'track_wetness': None, 'track_wetness_code': None,
+            'declared_wet': None, 'observed': True,
+        }
+        try:
+            # TrackTempCrew only: the older TrackTemp is deprecated by the SDK.
+            for key, var in (('air_temp_c', 'AirTemp'), ('track_temp_c', 'TrackTempCrew')):
+                temp = self._sdk_number(self._get_sdk_value(var, None))
+                payload[key] = round(temp, 2) if temp is not None else None
+            payload['humidity_pct'] = self._percent_from_fraction('RelativeHumidity')
+            payload['precipitation_pct'] = self._percent_from_fraction('Precipitation')
+            wind = self._sdk_number(self._get_sdk_value('WindVel', None), 0.0)
+            wind_kmh = self._sdk_number(self._get_sdk_value('WindVel', None), 0.0, 3.6)
+            payload['wind_speed_ms'] = round(wind, 3) if wind is not None else None
+            payload['wind_speed_kmh'] = round(wind_kmh, 3) if wind_kmh is not None else None
+            degrees = self._sdk_number(self._get_sdk_value('WindDir', None), None, 180.0 / math.pi)
+            if degrees is not None:
+                payload['wind_dir_deg'] = round(degrees % 360.0, 1) % 360.0
+            wetness = self._strict_int(self._get_sdk_value('TrackWetness', None))
+            if wetness is not None:
+                payload['track_wetness_code'] = wetness
+                payload['track_wetness'] = _TRACK_WETNESS_NAMES.get(wetness)
+            payload['declared_wet'] = self._sdk_bool('WeatherDeclaredWet')
+        except Exception as e:
+            logging.debug(f"Weather data unavailable: {e}")
         return payload
 
     # ------------------------------------------------------------------
