@@ -1,3 +1,20 @@
-build/
+# Build output (regenerate with build.bat / python build_exe.py)
 /build/
+/dist/
+/release/
+/.venv-build/
+/src/dist/
+*_verify/
 
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local tooling / agent state
+.atl/
+.omo/
+.codegraph
+.vscode/
+.idea/

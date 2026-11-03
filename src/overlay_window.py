@@ -1,6 +1,5 @@
 import webview
 import sys
-import json
 import threading
 import time
 import ctypes

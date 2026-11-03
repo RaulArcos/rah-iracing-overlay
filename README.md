@@ -23,30 +23,25 @@ You can compile your own modified version, or make use of the precompiled one yo
 
 ### **Prerequisites**
 
-Before compiling, make sure you have the following installed:
+- **Windows** with **64-bit Python 3.10–3.13** ([download](https://www.python.org/downloads/windows/) or `winget install Python.Python.3.13`).
+- Internet access the first time, to download the pinned dependencies.
 
-- **Python 3.10+**: Ensure you have Python installed. You can download it from [here](https://www.python.org/downloads/).
-- **iRacing SDK**: Install iRacing for telemetry data [here](https://github.com/kutu/pyirsdk.git).
-- **Requirements file**: You will find a requirements.txt file on the repo for you to get all the libraries.
-  
-### **1. Clone the Repository**
+### **Build**
 
 ```bash
 git clone https://github.com/RaulArcos/rah-iracing-overlay.git
-cd iracing-input-telemetry-overlay
+cd rah-iracing-overlay
+build.bat
 ```
 
-### **2. Install Dependencies**
+Or double-click `build.bat`. It:
 
-```bash
-pip install -r requirements.txt
-```
+1. creates an isolated `.venv-build` with the pinned versions from `requirements-build.txt` (your global Python is never touched, and the step is skipped when nothing changed);
+2. runs the Python test suite;
+3. builds `dist\RAH_Telemetry_Overlay\RAH_Telemetry_Overlay.exe` with PyInstaller;
+4. zips it into `release\RAH_Telemetry_Overlay-<date>-<commit>.zip`, ready to share.
 
-### **3. Compile into an EXE file**
-
-```bash
-python3.10.exe (or your version) build_exe.py
-```
+Options: `build.bat --skip-tests`, `build.bat --no-zip` (same flags for `python build_exe.py`). Close the overlay app before rebuilding.
 
 ## **Usage**
 

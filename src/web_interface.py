@@ -4,7 +4,7 @@ import platform
 import time
 import threading
 import logging
-from typing import List, Dict, Optional, Any, Union
+from typing import List, Dict, Optional, Any
 
 using_fallback_mode = False
 

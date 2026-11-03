@@ -5,7 +5,6 @@ from overlay_window import OverlayWindow
 import json
 import logging
 import sys
-import threading
 import time
 
 interface_bp = Blueprint(
