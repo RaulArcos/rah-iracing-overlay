@@ -11,10 +11,30 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node (tests use the built-in runner; nothing should be installed)
+node_modules/
+
+# Logs and temporary files
+*.log
+*.tmp
+.debug-journal.md
+
+# OS / editor
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
 
 # Local tooling / agent state
 .atl/
 .omo/
 .codegraph
-.vscode/
-.idea/
+
+# Release-only assets and private planning notes (not part of the source tree)
+images/*.mp4
+odd/
