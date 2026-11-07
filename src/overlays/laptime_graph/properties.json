@@ -4,7 +4,7 @@
     "description": "Live lap-time trend with best/last/delta indicators.",
     "resolution": {
         "width": 540,
-        "height": 230
+        "height": 620
     },
     "position": {
         "x": 0,

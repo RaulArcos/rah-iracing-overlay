@@ -5,34 +5,46 @@
     <title>RAH iRacing Overlay</title>
     <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='input_telemetry', filename='input_telemetry.css') }}">
     <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='overlay-theme.css') }}">
+    <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='race-system.css') }}">
     <script src="{{ url_for('serve_common_js', filename='overlay_theme.js') }}"></script>
     <script src="{{ url_for('overlays.serve_static', overlay_name='input_telemetry', filename='input_telemetry.js') }}"></script>
     <script src="{{ url_for('serve_common_js', filename='socket.io.min.js') }}"></script>
 </head>
 <body>
-    <div class="telemetry-container pywebview-drag-region">
+    <div class="telemetry-container rah-card rah-race pywebview-drag-region">
+        <div class="rah-card__header"><span>Input telemetry</span><span class="rah-muted">RAH / INPUTS</span></div>
         <div class="telemetry-content">
-            <canvas id="telemetry-graph" width="300" height="100"></canvas>
-    
+            <div class="it-graph">
+                <canvas id="telemetry-graph" width="300" height="100"></canvas>
+            </div>
+
             <div class="telemetry-bars">
-                <div id="clutch-bar" class="bar">
-                    <div class="bar-fill" id="clutch-fill"></div>
+                <div class="it-pedal it-pedal--clutch">
+                    <span class="it-pedal__value rah-num" id="clutch-value">0</span>
+                    <div id="clutch-bar" class="bar"><div class="bar-fill" id="clutch-fill"></div></div>
+                    <span class="it-pedal__label">C</span>
                 </div>
-                <div id="brake-bar" class="bar">
-                    <div class="bar-fill" id="brake-fill"></div>
+                <div class="it-pedal it-pedal--brake">
+                    <span class="it-pedal__value rah-num" id="brake-value">0</span>
+                    <div id="brake-bar" class="bar"><div class="bar-fill" id="brake-fill"></div></div>
+                    <span class="it-pedal__label">B</span>
                 </div>
-                <div id="throttle-bar" class="bar">
-                    <div class="bar-fill" id="throttle-fill"></div>
+                <div class="it-pedal it-pedal--throttle">
+                    <span class="it-pedal__value rah-num" id="throttle-value">0</span>
+                    <div id="throttle-bar" class="bar"><div class="bar-fill" id="throttle-fill"></div></div>
+                    <span class="it-pedal__label">T</span>
                 </div>
             </div>
-    
+
             <div class="telemetry-right">
                 <div class="gear-steering-container">
                     <div class="gear-speed-container">
-                        <div id="gear-display">4</div>
-                        <div id="speed-display">183 kph</div>
+                        <div id="gear-display">—</div>
+                        <div id="speed-display">— km/h</div>
                     </div>
-                    <img src="{{ url_for('overlays.serve_static', overlay_name='input_telemetry', filename='images/steering_wheel.png') }}" alt="Steering Wheel" id="steering-wheel" class="steering-wheel-icon">
+                    <div class="it-wheel">
+                        <img src="{{ url_for('overlays.serve_static', overlay_name='input_telemetry', filename='images/steering_wheel.png') }}" alt="Steering Wheel" id="steering-wheel" class="steering-wheel-icon">
+                    </div>
                 </div>
             </div>
         </div>

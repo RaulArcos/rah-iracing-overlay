@@ -12,13 +12,15 @@ document.addEventListener("DOMContentLoaded", function() {
     // Rows shown per class: the top cars, then the player and neighbours.
     const MAX_ROWS_PER_CLASS = 8;
     const BASIS_TEXT = {
-        race_f2time: 'Gap: race CarIdxF2Time, seconds behind the leader (laps down when lapped)'
+        race_f2time: 'Gap: race CarIdxF2Time (seconds; laps if lapped)'
     };
 
     const sessionEl = document.getElementById('st-session');
     const statusEl = document.getElementById('st-status');
     const groupsEl = document.getElementById('st-groups');
     const basisEl = document.getElementById('st-basis');
+    const summaryEl = document.getElementById('st-summary');
+    const meta = RahRaceMetadata;
 
     let lastUpdate = null;
 
@@ -80,12 +82,17 @@ document.addEventListener("DOMContentLoaded", function() {
         groupsEl.textContent = '';
         sessionEl.textContent = UNAVAILABLE;
         basisEl.textContent = UNAVAILABLE;
+        summaryEl.textContent = UNAVAILABLE;
         setStatus(message, level);
     }
 
     function makeRow(car) {
         const row = document.createElement('div');
-        row.className = 'rah-row st-row' + (car.is_player === true ? ' st-row--player' : '');
+        row.className = 'rah-row st-row rah-table-row rah-class-mark' +
+            (car.is_player === true ? ' st-row--player rah-player' : '');
+        meta.paint(row, '--rah-class-color', car.class_color);
+        const cellClasses = ['st-overall', 'rah-position st-class', 'st-number', 'st-name', 'st-lap',
+            'st-best', 'st-last', 'st-gap', 'st-int', 'st-pit'];
         [
             prefixed('P', car.position),
             prefixed('C', car.class_position),
@@ -97,12 +104,13 @@ document.addEventListener("DOMContentLoaded", function() {
             formatGap(car),
             plus(car.interval_s),
             car.on_pit_road === true ? 'PIT' : ''
-        ].forEach(function(value) {
+        ].forEach(function(value, index) {
             const cell = document.createElement('span');
-            cell.className = 'rah-num';
+            cell.className = 'rah-num ' + cellClasses[index];
             cell.textContent = value;
             row.appendChild(cell);
         });
+        meta.badges(car).forEach(cell => row.appendChild(cell));
         return row;
     }
 
@@ -146,13 +154,15 @@ document.addEventListener("DOMContentLoaded", function() {
             const block = document.createElement('div');
             const title = document.createElement('div');
             title.className = 'st-group-title';
-            title.textContent = groupTitle(group, shown.length, cars.length);
+            title.textContent = groupTitle(group, shown.length, cars.length) + ' · ' + meta.sof(group.sof);
+            meta.paint(title, '--rah-class-color', group.class_color);
             block.appendChild(title);
             shown.forEach(function(car) { block.appendChild(makeRow(car)); });
             groupsEl.appendChild(block);
             rendered += shown.length;
         });
         sessionEl.textContent = text(data.session_type) || UNAVAILABLE;
+        summaryEl.textContent = meta.summary(data.session_summary);
         basisEl.textContent = BASIS_TEXT[data.gap_basis] || 'Gap: unavailable (race timing not confirmed)';
         if (rendered) {
             setStatus('Live', 'ok');

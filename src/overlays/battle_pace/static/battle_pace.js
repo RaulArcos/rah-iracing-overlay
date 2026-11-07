@@ -27,6 +27,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const classEl = document.getElementById('bp-class');
     const statusEl = document.getElementById('bp-status');
     const basisEl = document.getElementById('bp-basis');
+    const recent = {ahead: document.getElementById('bp-ahead-recent'), behind: document.getElementById('bp-behind-recent')};
     const cards = {};
     ROLES.forEach(function(role) {
         cards[role[0]] = {};
@@ -109,6 +110,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function clearCards() {
+        Object.values(recent).forEach(el => { el.textContent = ''; });
         ROLES.forEach(function(role) {
             role[1].forEach(function(field) {
                 cards[role[0]][field].textContent = UNAVAILABLE;
@@ -138,6 +140,16 @@ document.addEventListener("DOMContentLoaded", function() {
             if (isObject(data.behind)) {
                 renderRival(cards.behind, data.behind, '+');
             }
+            ['ahead', 'behind'].forEach(function(role) {
+                const entry = data[role];
+                if (!isObject(entry) || !Array.isArray(entry.recent_deltas_s)) return;
+                entry.recent_deltas_s.slice(-5).forEach(function(value) {
+                    const chip = document.createElement('span');
+                    chip.textContent = signed(value);
+                    chip.className = 'bp-chip' + (!isNumber(value) || value === 0 ? '' : value < 0 ? ' bp-chip--loss' : ' bp-chip--gain');
+                    recent[role].appendChild(chip);
+                });
+            });
         }
         classEl.textContent = text(data.class_name) || UNAVAILABLE;
         basisEl.textContent = BASIS_TEXT[data.gap_basis] || 'Gap: unavailable (race timing not confirmed)';

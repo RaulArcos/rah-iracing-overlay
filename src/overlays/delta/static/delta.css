@@ -1,0 +1,165 @@
+html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0); }
+
+/* F1 timing colours */
+.delta-container {
+    --dl-purple: #b46cff;
+    --dl-green: #2fd36f;
+    --dl-yellow: #f5c73a;
+    --dl-gain: #2fd36f;
+    --dl-loss: #ff4d4d;
+}
+.delta-container.rah-race { position: relative; width: 460px; cursor: move; user-select: none; }
+.delta-container .rah-card__header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+.dl-head-right { display: inline-flex; align-items: center; gap: 10px; }
+.dl-lap { color: var(--rah-race-faint); letter-spacing: .14em; }
+
+/* Time + live delta ----------------------------------------------------- */
+.dl-main { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 10px; align-items: stretch; }
+.dl-time-box {
+    position: relative;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 4px 12px 5px;
+    border-radius: var(--rah-race-radius-sm);
+    background: var(--rah-race-inset);
+    overflow: hidden;
+    transition: background-color .35s ease;
+}
+.dl-time {
+    font-family: var(--rah-race-display);
+    font-size: 46px; font-weight: 700; line-height: 1;
+    letter-spacing: .01em;
+    font-variant-numeric: tabular-nums;
+    color: var(--rah-race-ink);
+    transition: color .3s ease;
+}
+.dl-time-note {
+    margin-top: 2px;
+    font-family: var(--rah-race-label); font-size: 9px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--rah-race-faint);
+}
+/* Finished lap: the box floods with the lap colour, F1 style */
+.dl-time-box.has-state .dl-time { color: #0d0d10; }
+.dl-time-box.has-state .dl-time-note { color: rgba(13, 13, 16, .7); }
+.dl-time-box.st-purple { background: var(--dl-purple); }
+.dl-time-box.st-green { background: var(--dl-green); }
+.dl-time-box.st-yellow { background: var(--dl-yellow); }
+.dl-time-box.st-out { background: rgba(255, 255, 255, .14); }
+.dl-time-box.st-out .dl-time { color: var(--rah-race-ink); }
+.dl-time-box.is-final::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .55) 50%, transparent 70%);
+    transform: translateX(-100%);
+    animation: dl-sheen .9s cubic-bezier(.2, .7, .2, 1) .05s forwards;
+}
+
+.dl-delta {
+    display: flex; flex-direction: column; justify-content: center; align-items: flex-end;
+    padding: 4px 12px;
+    border-radius: var(--rah-race-radius-sm);
+    background: var(--rah-race-inset);
+    transition: background-color .25s ease;
+}
+.dl-delta__label { font-family: var(--rah-race-label); font-size: 9px; letter-spacing: .14em; color: var(--rah-race-faint); text-transform: uppercase; }
+.dl-delta__value {
+    font-family: var(--rah-race-display); font-size: 34px; font-weight: 700; line-height: 1.05;
+    font-variant-numeric: tabular-nums; color: var(--rah-race-dim);
+    transition: color .2s ease;
+}
+.dl-delta.sign-gain { background: rgba(47, 211, 111, .14); }
+.dl-delta.sign-gain .dl-delta__value { color: var(--dl-gain); }
+.dl-delta.sign-loss { background: rgba(255, 77, 77, .14); }
+.dl-delta.sign-loss .dl-delta__value { color: var(--dl-loss); }
+
+/* Delta bar: grows from the centre line, left = faster ------------------- */
+.dl-bar { margin-top: 8px; }
+.dl-bar__scale { display: flex; justify-content: space-between; font-family: var(--rah-race-label); font-size: 8.5px; color: var(--rah-race-faint); letter-spacing: .06em; margin-bottom: 3px; }
+.dl-bar__track { position: relative; height: 6px; border-radius: 999px; background: rgba(255, 255, 255, .07); overflow: hidden; }
+.dl-bar__track::after { content: ''; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; margin-left: -1px; background: var(--rah-race-ink); opacity: .7; }
+.dl-bar__fill { position: absolute; top: 0; bottom: 0; left: 50%; width: 0; border-radius: 999px; transition: width .12s linear, left .12s linear, background-color .2s; }
+.dl-bar__fill.gain { background: var(--dl-gain); box-shadow: 0 0 10px rgba(47, 211, 111, .6); }
+.dl-bar__fill.loss { background: var(--dl-loss); box-shadow: 0 0 10px rgba(255, 77, 77, .6); }
+
+/* Sectors -------------------------------------------------------------- */
+.dl-sectors { display: flex; gap: 4px; margin-top: 10px; counter-reset: dl-sector; }
+.dl-sector__label::before { counter-increment: dl-sector; content: 'S' counter(dl-sector); }
+.dl-sector {
+    position: relative; flex: 1 1 0; min-width: 0;
+    height: 30px;
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+    padding: 0 8px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, .06);
+    overflow: hidden;
+}
+.dl-sector__progress { position: absolute; inset: 0 auto 0 0; width: 0; background: rgba(255, 255, 255, .10); }
+.dl-sector__fill { position: absolute; inset: 0; transform: scaleX(0); transform-origin: left center; }
+.dl-sector__label, .dl-sector__time { position: relative; z-index: 1; }
+.dl-sector__label { font-family: var(--rah-race-label); font-size: 10px; font-weight: 600; letter-spacing: .1em; color: var(--rah-race-faint); }
+.dl-sector__time { font-family: var(--rah-race-font); font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--rah-race-ink); white-space: nowrap; }
+.dl-sector.is-current { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22); }
+.dl-sector.is-current .dl-sector__label { color: var(--rah-race-ink); }
+.dl-sector.has-state .dl-sector__fill { transform: scaleX(1); }
+.dl-sector.st-purple .dl-sector__fill { background: var(--dl-purple); }
+.dl-sector.st-green .dl-sector__fill { background: var(--dl-green); }
+.dl-sector.st-yellow .dl-sector__fill { background: var(--dl-yellow); }
+.dl-sector.st-out .dl-sector__fill { background: rgba(255, 255, 255, .16); }
+.dl-sector.has-state:not(.st-out) .dl-sector__label,
+.dl-sector.has-state:not(.st-out) .dl-sector__time { color: #0d0d10; }
+/* The F1 moment: colour wipes in left to right, the time pops, a flash */
+.dl-sector.just-set .dl-sector__fill { animation: dl-wipe .45s cubic-bezier(.2, .8, .2, 1) both; }
+.dl-sector.just-set .dl-sector__time { animation: dl-pop .5s cubic-bezier(.2, 1.4, .3, 1) .12s both; }
+.dl-sector.just-set::after {
+    content: ''; position: absolute; inset: 0; z-index: 2; background: #fff;
+    animation: dl-flash .5s ease-out both;
+}
+.dl-sectors.many .dl-sector { padding: 0 5px; }
+.dl-sectors.many .dl-sector__label { display: none; }
+.dl-sectors.many .dl-sector__time { font-size: 11.5px; margin: 0 auto; }
+
+/* Sector split: slides over the delta box for ~3 s (F1 style), then the
+   live delta shows again. Coloured time + gap to personal best. */
+.dl-delta { position: relative; overflow: hidden; }
+.dl-split {
+    position: absolute; inset: 0; z-index: 5;
+    display: grid; grid-template-rows: auto 1fr;
+    border-radius: inherit; overflow: hidden;
+    font-variant-numeric: tabular-nums;
+    transform: translateX(105%);
+    pointer-events: none;
+}
+.dl-split.show { animation: dl-split-in .42s cubic-bezier(.2, .9, .2, 1) both, dl-split-out .4s cubic-bezier(.6, 0, .8, .3) 2.8s forwards; }
+.dl-split__head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 3px 10px; background: #0d0d10;
+    font-family: var(--rah-race-label); font-size: 10px; font-weight: 600; letter-spacing: .12em; color: var(--rah-race-ink);
+}
+.dl-split__time {
+    display: flex; align-items: center; justify-content: flex-end; padding: 0 10px;
+    font-family: var(--rah-race-display); font-size: 32px; font-weight: 700; color: #0d0d10;
+}
+.dl-split.st-purple .dl-split__time { background: var(--dl-purple); }
+.dl-split.st-green .dl-split__time { background: var(--dl-green); }
+.dl-split.st-yellow .dl-split__time { background: var(--dl-yellow); }
+.dl-split.st-out .dl-split__time { background: #d7d9de; }
+.dl-split .is-gain { color: var(--dl-gain); }
+.dl-split .is-loss { color: var(--dl-loss); }
+
+@keyframes dl-wipe { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes dl-pop { 0% { transform: translateY(8px) scale(.85); opacity: 0; } 100% { transform: none; opacity: 1; } }
+@keyframes dl-flash { 0% { opacity: .75; } 100% { opacity: 0; } }
+@keyframes dl-sheen { to { transform: translateX(100%); } }
+@keyframes dl-split-in { from { transform: translateX(105%); } to { transform: none; } }
+@keyframes dl-split-out { from { transform: none; } to { transform: translateX(105%); } }
+
+/* User-selectable parts (launcher → Show) */
+html.rah-no-bar .dl-bar { display: none; }
+html.rah-no-sectors .dl-sectors, html.rah-no-sectors .dl-split { display: none; }
+html.rah-no-live_delta .dl-delta { display: none; }
+html.rah-no-live_delta .dl-main { grid-template-columns: 1fr; }
+html.rah-no-split .dl-split { display: none; }
+
+@media (max-width: 420px) {
+    .dl-main { grid-template-columns: minmax(0, 1fr) 120px; }
+    .dl-time { font-size: 38px; }
+    .dl-delta__value { font-size: 28px; }
+}

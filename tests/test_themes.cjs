@@ -14,6 +14,22 @@ const repoRoot = path.resolve(__dirname, '..');
 const themeJsPath = path.join(repoRoot, 'src', 'common', 'js', 'overlay_theme.js');
 const themeCssPath = path.join(repoRoot, 'src', 'common', 'css', 'overlay-theme.css');
 
+test('race skin is opt-in and loads after the existing theme on migrated pages', () => {
+    const migrated = ['input_telemetry', 'track_map', 'fuel_finish', 'session_strip',
+        'pit_assistant', 'weather', 'broadcast_driver', 'relative', 'standings', 'laptime_graph', 'battle_pace', 'radar', 'blindspot', 'delta'];
+    for (const name of migrated) {
+        const html = fs.readFileSync(path.join(repoRoot, 'src/overlays', name, `${name}.html`), 'utf8');
+        assert.match(html, /class="[^"]*\brah-race\b/);
+        assert.ok(html.indexOf('race-system.css') > html.indexOf('overlay-theme.css'));
+    }
+});
+
+test('input telemetry initial markup never advertises fabricated speed or gear', () => {
+    const html = fs.readFileSync(path.join(repoRoot, 'src/overlays/input_telemetry/input_telemetry.html'), 'utf8');
+    assert.match(html, /id="gear-display">—</);
+    assert.match(html, /id="speed-display">— km\/h</);
+});
+
 const OVERLAYS = [
     'input_telemetry',
     'relative',

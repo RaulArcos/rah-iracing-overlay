@@ -14,13 +14,16 @@ const repoRoot = path.resolve(__dirname, '..');
 
 function makeElement(id) {
     const classes = new Set();
-    return {
+    const el = {
         id,
         textContent: '',
         innerHTML: '',
         width: 320,
         height: 320,
         classes,
+        children: [],
+        style: { setProperty() {} },
+        appendChild(child) { this.children.push(child); },
         classList: {
             toggle(name, force) {
                 if (force === undefined) {
@@ -38,6 +41,16 @@ function makeElement(id) {
         },
         ctx: null,
     };
+    let text = '';
+    Object.defineProperty(el, 'textContent', {
+        get: () => text,
+        set: value => { text = String(value); el.children.length = 0; },
+    });
+    Object.defineProperty(el, 'className', {
+        get: () => [...classes].join(' '),
+        set: value => { classes.clear(); value.split(/\s+/).filter(Boolean).forEach(c => classes.add(c)); },
+    });
+    return el;
 }
 
 function makeCanvasContext() {
@@ -52,6 +65,7 @@ function makeCanvasContext() {
         arc: record('arc'),
         moveTo: record('moveTo'),
         lineTo: record('lineTo'),
+        fillText: record('fillText'),
         lineWidth: 2,
         strokeStyle: '',
         fillStyle: '',
@@ -63,6 +77,7 @@ function loadOverlayScript(relativePath) {
     let readyHandler = null;
     const handlers = {};
     const document = {
+        createElement: () => makeElement(null),
         addEventListener(event, handler) {
             if (event === 'DOMContentLoaded') readyHandler = handler;
         },
@@ -79,8 +94,11 @@ function loadOverlayScript(relativePath) {
             handlers[`${namespace}:${event}`] = handler;
         },
     });
-    const sandbox = { document, io, console };
+    const sandbox = { document, io, console, Date, setInterval: () => {} };
     vm.createContext(sandbox);
+    if (relativePath.includes('/relative/')) {
+        vm.runInContext(fs.readFileSync(path.join(repoRoot, 'src/common/js/race_metadata.js'), 'utf8'), sandbox);
+    }
     const code = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
     vm.runInContext(code, sandbox, { filename: relativePath });
     assert.ok(readyHandler, 'script must register a DOMContentLoaded handler');
@@ -97,10 +115,9 @@ test('relative overlay marks cars ahead/behind with the correct row class', () =
             { car_idx: 3, position: 4, car_number: '44', name: 'Cyd', gap: -1.2, on_pit_road: false },
         ],
     });
-    const html = elements['relative-body'].innerHTML;
-    const rows = html.split('<tr');
-    const aheadRow = rows[1];
-    const behindRow = rows[2];
+    const rows = elements['relative-body'].children;
+    const aheadRow = rows[0].className;
+    const behindRow = rows[1].className;
     assert.match(aheadRow, /row-ahead/);
     assert.doesNotMatch(aheadRow, /row-behind/);
     assert.match(behindRow, /row-behind/);
@@ -116,14 +133,14 @@ test('relative overlay keeps iRacing sign convention and formats gap labels', ()
             { car_idx: 3, position: 3, car_number: '44', name: 'Cyd', gap: -1.2, on_pit_road: true },
         ],
     });
-    const html = elements['relative-body'].innerHTML;
-    assert.match(html, /\+2\.50s/);
-    assert.match(html, /-1\.20s/);
-    assert.match(html, /row-pit/);
+    const rows = elements['relative-body'].children;
+    assert.equal(rows[0].children.at(-1).textContent, '+2.5s');
+    assert.equal(rows[1].children.at(-1).textContent, '-1.2s');
+    assert.ok(rows[1].classes.has('row-pit'));
     assert.equal(elements['player-pos'].textContent, 'P1');
 });
 
-test('relative overlay marks estimated gaps explicitly', () => {
+test('relative overlay displays SDK estimates without a tilde', () => {
     const { elements, handlers } = loadOverlayScript('src/overlays/relative/static/relative.js');
     handlers['/relative:relative_update']({
         player_position: 1,
@@ -131,7 +148,7 @@ test('relative overlay marks estimated gaps explicitly', () => {
             { car_idx: 2, position: 2, car_number: '7', name: 'Bob', gap: 2.5, gap_is_estimate: true },
         ],
     });
-    assert.match(elements['relative-body'].innerHTML, /~\+2\.50s/);
+    assert.equal(elements['relative-body'].children[0].children.at(-1).textContent, '+2.5s');
 });
 
 test('relative overlay renders legacy payloads without estimate marker unchanged', () => {
@@ -140,8 +157,7 @@ test('relative overlay renders legacy payloads without estimate marker unchanged
         player_position: 1,
         cars: [{ car_idx: 2, position: 2, car_number: '7', name: 'Bob', gap: 2.5 }],
     });
-    assert.match(elements['relative-body'].innerHTML, /\+2\.50s/);
-    assert.doesNotMatch(elements['relative-body'].innerHTML, /~/);
+    assert.equal(elements['relative-body'].children[0].children.at(-1).textContent, '+2.5s');
 });
 
 test('radar overlay derives meters from the provided track length', () => {
@@ -157,11 +173,11 @@ test('radar overlay derives meters from the provided track length', () => {
     });
     assert.equal(elements['left-alert'].classes.has('active'), false);
     assert.equal(elements['right-alert'].classes.has('active'), true);
-    const html = elements['nearby-list'].innerHTML;
+    const html = elements['nearby-list'].children.map(row => row.textContent).join(' ');
     assert.match(html, /Car 2/);
-    assert.match(html, /AHEAD 118m/);
+    assert.match(html, /AHEAD ~118m/);
     assert.match(html, /Car 3/);
-    assert.match(html, /BEHIND 59m/);
+    assert.match(html, /BEHIND ~59m/);
 });
 
 test('radar overlay shows no invented meters when track length is unavailable', () => {
@@ -171,7 +187,7 @@ test('radar overlay shows no invented meters when track length is unavailable', 
         right_alert: false,
         nearby: [{ car_idx: 2, distance_pct: 0.02, relation: 'ahead' }],
     });
-    const html = elements['nearby-list'].innerHTML;
+    const html = elements['nearby-list'].children.map(row => row.textContent).join(' ');
     assert.match(html, /AHEAD/);
     assert.doesNotMatch(html, /\d+m/);
     assert.doesNotMatch(html, /5500/);
@@ -180,7 +196,7 @@ test('radar overlay shows no invented meters when track length is unavailable', 
         track_length_m: 0,
         nearby: [{ car_idx: 2, distance_pct: 0.02, relation: 'behind' }],
     });
-    assert.doesNotMatch(elements['nearby-list'].innerHTML, /\d+m/);
+    assert.doesNotMatch(elements['nearby-list'].children.map(row => row.textContent).join(' '), /\d+m/);
 });
 
 test('laptime graph skips non-finite history points', () => {

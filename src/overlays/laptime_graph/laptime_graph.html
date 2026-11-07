@@ -5,19 +5,20 @@
     <title>Laptime Graph Overlay</title>
     <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='laptime_graph', filename='laptime_graph.css') }}">
     <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='overlay-theme.css') }}">
+    <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='race-system.css') }}">
     <script src="{{ url_for('serve_common_js', filename='overlay_theme.js') }}"></script>
     <script src="{{ url_for('overlays.serve_static', overlay_name='laptime_graph', filename='laptime_graph.js') }}"></script>
     <script src="{{ url_for('serve_common_js', filename='socket.io.min.js') }}"></script>
 </head>
 <body>
-    <div class="laptime-container pywebview-drag-region">
-        <div class="header">Laptime Graph</div>
-        <canvas id="laptime-canvas" width="500" height="140"></canvas>
-        <div class="stats">
-            <span id="best">Best: 0.000</span>
-            <span id="last">Last: 0.000</span>
-            <span id="delta">Delta: +0.000</span>
-        </div>
+    <div class="laptime-container rah-card rah-race pywebview-drag-region">
+        <div class="rah-card__header"><span>Laptime Log</span><span id="log-status">Waiting for data</span></div>
+        <div class="laplog-best"><span><span id="log-best-label">SESSION BEST</span><small>track at finish</small></span><strong id="log-best">--</strong><span id="log-best-temp">--</span></div>
+        <div class="laplog-plot"><canvas id="laptime-canvas" width="500" height="150" aria-label="Observed lap times, faster at top"></canvas><span id="log-empty">No observed completed laps</span></div>
+        <div class="laplog-row laplog-head"><span>Lap</span><span>Time</span><span>+ To best</span><span>Track °C</span><span>Inc.</span></div>
+        <div id="laplog-rows" class="rah-num"></div>
+        <div class="laplog-note">Last 10 • × incident, not invalid • -- unknown</div>
+        <div class="stats rah-footer"><span id="best">Best: --</span><span id="last">Last: --</span><span id="delta">Delta: --</span></div>
     </div>
 </body>
 </html>

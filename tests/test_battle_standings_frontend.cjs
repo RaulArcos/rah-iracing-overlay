@@ -21,6 +21,7 @@ function makeElement(id) {
         innerHTML: '',
         children: [],
         classes,
+        style: { values: {}, setProperty(key, value) { this.values[key] = value; } },
         classList: {
             add(name) { classes.add(name); },
             remove(name) { classes.delete(name); },
@@ -77,6 +78,8 @@ function loadOverlay(name, options = {}) {
         clearInterval: () => {},
     };
     vm.createContext(sandbox);
+    const shared = path.join(repoRoot, 'src/common/js/race_metadata.js');
+    if (fs.existsSync(shared)) vm.runInContext(fs.readFileSync(shared, 'utf8'), sandbox);
     const relativePath = `src/overlays/${name}/static/${name}.js`;
     vm.runInContext(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8'), sandbox, { filename: relativePath });
     assert.ok(readyHandler, 'script must register a DOMContentLoaded handler');
@@ -149,6 +152,30 @@ function battlePayload(overrides = {}) {
 }
 
 const SHARED_FIELDS = ['name', 'pos', 'last', 'best', 'pace', 'trend'];
+test('relative observed AI placeholders: one decimal, physical order, honest badges, safe text in both themes', () => {
+    for (const theme of ['original', 'glass']) {
+        const o = loadOverlay('relative', {theme});
+        o.handlers.relative_update({player_car_idx: 0, player_position: 1,
+            player: {car_idx: 0, is_player: true, name: 'Player', gap: 0, track_delta_pct: 0,
+                profile_unavailable_reason: 'ai_session_placeholder'},
+            player_class_sof: {value: null, is_ai_session: true},
+            session_summary: {is_ai_session: true},
+            cars: [
+                {car_idx: 1, name: '<img src=x onerror=alert(1)>', is_ai: true, gap: 1.1658, track_delta_pct: .015},
+                {car_idx: 2, name: 'Behind', is_ai: true, gap: -.001, track_delta_pct: -.01},
+                {car_idx: 3, name: 'Missing', is_ai: true, gap: null, track_delta_pct: .02},
+            ]});
+        const rows = o.elements['relative-body'].children;
+        assert.deepEqual(rows.map(r => r.children[6].textContent), ['--', '+1.2s', '0.0s', '0.0s']);
+        assert.equal(rows[1].children[2].textContent, '<img src=x onerror=alert(1)>');
+        assert.equal(rows[1].children[3].textContent, 'AI');
+        assert.equal(rows[1].children[4].textContent, '--');
+        assert.match(rows[2].children[4].title, /online profile.*unavailable/i);
+        assert.equal(o.text('rel-sof'), 'AI session');
+        o.clock.now += 3001; o.intervals[0].fn();
+        assert.equal(o.elements['relative-body'].children.length, 0);
+    }
+});
 const COMPARE_FIELDS = ['gap', 'dlast', 'dbest', 'dpace'];
 const BATTLE_IDS = [
     ...['ahead', 'player', 'behind'].flatMap((role) => SHARED_FIELDS.map((f) => `bp-${role}-${f}`)),
@@ -161,7 +188,8 @@ function rows(o) {
 }
 
 function cells(row) {
-    return row.children.map((cell) => cell.textContent);
+    // First ten cells retain the legacy timing/identity contract; R2 adds badges.
+    return row.children.slice(0, 10).map((cell) => cell.textContent);
 }
 
 // ---- standings ----------------------------------------------------------
@@ -503,5 +531,89 @@ test('battle & standings docs describe routes, units, signs, provenance and live
         /consecutive/i, /unknown class/i, /practice|qualif/i, /live validation/i,
     ]) {
         assert.match(docs, pattern);
+    }
+});
+
+test('R2 standings adds guarded rating/license/gain badges and partial class SoF', () => {
+    const o = loadOverlay('standings');
+    const car = standingsCar({ irating: 2345, license: 'A', safety_rating: 3.42,
+        license_color: '#0153db', class_color: '#ffda59', positions_gained: null });
+    o.handlers.standings_update(standingsPayload({classes: [{class_name: 'GT3', known: true,
+        sof: {value: 2200, rated: 1, total: 2, complete: false}, cars: [car]}]}));
+    const group = rows(o)[0];
+    assert.match(group.children[0].textContent, /SoF 2200.*partial 1\/2/);
+    assert.deepEqual(group.children[1].children.slice(10).map(c => c.textContent), ['A 3.42', '2.3k', '--']);
+    o.handlers.standings_update(standingsPayload({classes: [{cars: [standingsCar({
+        irating: -1, license: '<img>', safety_rating: Infinity, class_color: 'url(x)'})]}]}));
+    assert.deepEqual(rows(o)[0].children[1].children.slice(10).map(c => c.textContent), ['--', '--', '--']);
+});
+
+test('R2 relative uses actual player, estimated gap labels and safe text in both themes', () => {
+    const hostile = '<img src=x onerror=alert(1)>';
+    const payload = {player_car_idx: 1, player_position: 4,
+        player: standingsCar({is_player: true, irating: 2100, license: 'A', safety_rating: 3.42}),
+        cars: [{car_idx: 2, name: hostile, car_number: hostile, position: 2, gap: 2.5, gap_is_estimate: true},
+            {car_idx: 3, name: 'Cyd', gap: -1.2, on_pit_road: true}],
+        player_class_sof: {value: 2200, rated: 1, total: 2, complete: false}};
+    const a = loadOverlay('relative'), b = loadOverlay('relative', {theme: 'glass'});
+    for (const o of [a, b]) {
+        o.handlers.relative_update(payload);
+        const rendered = o.elements['relative-body'].children;
+        assert.equal(rendered.filter(r => r.classes.has('rah-player')).length, 1);
+        const all = rendered.map(r => r.children.map(c => c.textContent).join(' ')).join(' ');
+        assert.match(all, /Ada/);
+        assert.match(all, /\+2\.5s/);
+        assert.match(all, /-1\.2s/);
+        assert.doesNotMatch(all, /~/);
+        assert.match(all, /<img src=x/);
+        assert.match(o.text('rel-sof'), /partial/);
+        assert.equal(o.elements['relative-body'].innerHTML, '');
+    }
+    assert.deepEqual(a.snapshot(), b.snapshot());
+    const source = fs.readFileSync(path.join(repoRoot, 'src/overlays/relative/static/relative.js'), 'utf8');
+    assert.doesNotMatch(source, /innerHTML|insertAdjacentHTML/);
+});
+
+test('R2 relative clears disconnect/errors, invalid payload and silent stale data', () => {
+    const o = loadOverlay('relative');
+    const payload = {cars: [{car_idx: 2, gap: NaN, irating: true, license: 'x', safety_rating: '3'}]};
+    for (const event of ['disconnect', 'connect_error']) {
+        o.handlers.relative_update(payload);
+        assert.equal(o.elements['relative-body'].children.length, 1);
+        assert.equal(o.elements['relative-body'].children[0].children.at(-1).textContent, '--');
+        o.handlers[event]();
+        assert.equal(o.elements['relative-body'].children.length, 0);
+        assert.match(o.text('rel-status'), /Disconnected/);
+    }
+    o.handlers.relative_update(payload);
+    o.clock.now += 4000;
+    o.intervals[0].fn();
+    assert.equal(o.elements['relative-body'].children.length, 0);
+    assert.match(o.text('rel-status'), /Stale/);
+    for (const bad of [null, [], {cars: 'x'}]) {
+        o.handlers.relative_update(bad);
+        assert.match(o.text('rel-status'), /No data/);
+    }
+});
+
+test('R2 both scripts guard bad badge values and CSS colors without guessing metadata', () => {
+    for (const name of ['relative', 'standings']) {
+        const o = loadOverlay(name);
+        const car = standingsCar({class_color: 'url(javascript:x)', license_color: 'red;display:none',
+            irating: NaN, license: '<img>', safety_rating: Infinity, positions_gained: 20});
+        const render = () => o.handlers[name + '_update'](name === 'relative'
+            ? {cars: [car]} : {classes: [{cars: [car], sof: {value: null}}]});
+        const row = () => name === 'relative' ? o.elements['relative-body'].children[0] : rows(o)[0].children[1];
+        const badges = () => row().children.slice(name === 'relative' ? 3 : 10, name === 'relative' ? 6 : 13);
+        render();
+        assert.deepEqual(row().style.values, {});
+        assert.deepEqual(badges().map(c => c.textContent), ['--', '--', '--']);
+        assert.deepEqual(badges()[0].style.values, {});
+        Object.assign(car, {class_color: '#ffda59', license_color: '#0153db', irating: 2345,
+            license: 'A', safety_rating: 3.42});
+        render();
+        assert.equal(row().style.values['--rah-class-color'], '#ffda59');
+        assert.equal(badges()[0].style.values['--rah-license-color'], '#0153db');
+        assert.deepEqual(badges().map(c => c.textContent), ['A 3.42', '2.3k', '--']);
     }
 });

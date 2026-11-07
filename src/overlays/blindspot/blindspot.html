@@ -2,21 +2,23 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Blindspot Overlay</title>
     <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='blindspot', filename='blindspot.css') }}">
     <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='overlay-theme.css') }}">
+    <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='race-system.css') }}">
     <script src="{{ url_for('serve_common_js', filename='overlay_theme.js') }}"></script>
     <script src="{{ url_for('overlays.serve_static', overlay_name='blindspot', filename='blindspot.js') }}"></script>
     <script src="{{ url_for('serve_common_js', filename='socket.io.min.js') }}"></script>
 </head>
 <body>
-    <div class="blindspot-container pywebview-drag-region">
-        <div id="left-zone" class="zone">LEFT</div>
-        <div class="center-zone">
-            <div class="title">Blindspot</div>
-            <div id="status-msg" class="status-msg">CLEAR</div>
+    <div id="proximity-panel" class="blindspot-container rah-race rah-card pywebview-drag-region">
+        <div class="rah-card__header"><span>Blind spot</span><span>SPOTTER</span></div>
+        <div class="blindspot-body">
+            <div id="left-zone" class="zone"><span class="tile-light"></span><span id="left-label">LEFT ?</span></div>
+            <div class="center-zone"><div id="status-msg" class="status-msg" role="status">Spotter unavailable</div><div class="spotter-source">iRacing side alerts</div></div>
+            <div id="right-zone" class="zone"><span class="tile-light"></span><span id="right-label">RIGHT ?</span></div>
         </div>
-        <div id="right-zone" class="zone">RIGHT</div>
     </div>
 </body>
 </html>

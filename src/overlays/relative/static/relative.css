@@ -1,59 +1,49 @@
-html, body {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0);
+html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0); }
+.relative-container.rah-race { width: 480px; max-height: 100vh; display: flex; flex-direction: column; cursor: move; user-select: none; }
+.relative-container .rah-card__header.header { display: flex; justify-content: space-between; margin-bottom: 2px; }
+.relative-container #player-pos { margin-left: auto; font-family: var(--rah-race-mono); color: var(--rah-race-gold); }
+.relative-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; padding-bottom: 6px; color: var(--rah-race-dim); }
+.relative-meta #rel-sof { color: var(--rah-race-ink); font-weight: 700; }
+.relative-row { display: grid; grid-template-columns: 26px 30px minmax(0, 1fr) 52px 38px 22px 70px; gap: 2px; align-items: center; }
+.relative-row > span { min-width: 0; }
+.relative-row.relative-head { font-size: 9px; text-transform: uppercase; color: var(--rah-race-gold); padding: 0 0 4px 4px; }
+#relative-body { min-height: 28px; overflow: auto; flex-shrink: 1; }
+.relative-row.rah-table-row { min-height: 28px; font-size: 11px; border-bottom: 1px solid var(--rah-race-rule); }
+.relative-row .rah-position { min-width: 0; min-height: 24px; padding: 2px; font-size: 13px; }
+.relative-row .relative-name { font-family: var(--rah-race-font); font-size: 12px; font-weight: 650; overflow-wrap: anywhere; }
+.relative-row .relative-number { font-size: 10px; overflow-wrap: anywhere; }
+.relative-row .relative-gap { text-align: right; padding-right: 3px; font-weight: 700; }
+.relative-row .race-license, .relative-row .race-rating { font-size: 10px; padding: 2px; text-align: center; }
+.relative-row .race-gain { font-size: 10px; text-align: center; }
+.relative-row.row-pit .relative-number { color: var(--rah-race-gold); }
+.relative-row.row-pit .relative-name::after { content: ' PIT'; font-size: 9px; color: var(--rah-race-gold); }
+.relative-container .relative-footer { display: grid; gap: 2px; margin-top: 6px; padding-top: 5px; font-size: 10px; flex-shrink: 0; }
+@media (max-width: 400px) {
+    .relative-row { grid-template-columns: 24px 26px minmax(0, 1fr) 48px 32px 20px 66px; }
+    .relative-row .relative-name { font-size: 11px; }
+    .relative-row .race-license, .relative-row .race-rating { font-size: 9px; }
+    .relative-meta { font-size: 10px; }
 }
 
-.relative-container {
-    width: 460px;
-    background: rgba(15, 15, 15, 0.82);
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    color: #f1f1f1;
-    font-family: Arial, sans-serif;
-    padding: 10px;
-    cursor: move;
+/* ---- v2: user-selectable columns + polish -------------------------------- */
+.relative-container.rah-race { --c-lic: 52px; --c-ir: 38px; --c-gain: 22px; --c-num: 30px; }
+html.rah-no-license .relative-container { --c-lic: 0px; }
+html.rah-no-irating .relative-container { --c-ir: 0px; }
+html.rah-no-gain .relative-container { --c-gain: 0px; }
+html.rah-no-car_number .relative-container { --c-num: 0px; }
+.relative-row { grid-template-columns: 26px var(--c-num) minmax(0, 1fr) var(--c-lic) var(--c-ir) var(--c-gain) 70px; column-gap: 4px; }
+html.rah-no-license .relative-row > :nth-child(4), html.rah-no-irating .relative-row > :nth-child(5),
+html.rah-no-gain .relative-row > :nth-child(6), html.rah-no-car_number .relative-row > :nth-child(2) { visibility: hidden; overflow: hidden; padding: 0; }
+html.rah-no-meta .relative-meta { display: none; }
+.relative-row.relative-head { color: var(--rah-race-dim); font-weight: 700; letter-spacing: .08em; }
+.relative-row.rah-table-row { min-height: 28px; border-bottom-color: rgba(255,255,255,.05); }
+.relative-row .rah-position { margin-left: 3px; min-height: 22px; font-size: 12px; }
+.relative-row .relative-number { color: var(--rah-race-dim); font-weight: 600; }
+.relative-row .relative-gap { font-variant-numeric: tabular-nums; }
+.relative-meta { padding: 0 2px 8px; }
+@media (max-width: 400px) {
+    .relative-row { grid-template-columns: 24px var(--c-num) minmax(0, 1fr) var(--c-lic) var(--c-ir) var(--c-gain) 66px; }
 }
-
-.header {
-    display: flex;
-    justify-content: space-between;
-    font-size: 14px;
-    font-weight: 700;
-    margin-bottom: 8px;
-}
-
-.relative-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-}
-
-.relative-table th {
-    color: #bdbdbd;
-    font-weight: 700;
-    text-align: left;
-    padding: 4px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.relative-table td {
-    padding: 4px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.row-ahead {
-    color: #9ee4a5;
-}
-
-.row-behind {
-    color: #f6b5b5;
-}
-
-.row-pit {
-    opacity: 0.65;
-}
+/* Gap is the number you glance at: a touch larger than the rest of the row */
+.relative-row .relative-gap { font-size: 13.5px; font-weight: 700; letter-spacing: -.01em; }
+.relative-row.rah-player .relative-gap { color: var(--rah-race-gold); }

@@ -5,12 +5,13 @@
     <title>Fuel &amp; Finish Overlay</title>
     <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='fuel_finish', filename='fuel_finish.css') }}">
     <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='overlay-theme.css') }}">
+    <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='race-system.css') }}">
     <script src="{{ url_for('serve_common_js', filename='overlay_theme.js') }}"></script>
     <script src="{{ url_for('overlays.serve_static', overlay_name='fuel_finish', filename='fuel_finish.js') }}"></script>
     <script src="{{ url_for('serve_common_js', filename='socket.io.min.js') }}"></script>
 </head>
 <body>
-    <div class="fuel-container rah-card pywebview-drag-region">
+    <div class="fuel-container rah-card rah-race pywebview-drag-region">
         <div class="rah-card__header">
             <span>Fuel &amp; Finish</span>
             <span id="fuel-status" class="rah-status rah-status--warn">Waiting for data</span>
@@ -49,7 +50,7 @@
                 <span class="rah-metric__value rah-num fuel-small" id="fuel-samples">0 laps</span>
             </div>
         </div>
-        <div class="fuel-footer">
+        <div class="fuel-footer rah-footer">
             <span id="fuel-basis">--</span>
             <span class="fuel-note">Advisory estimate from clean laps. No automatic refuel.</span>
         </div>

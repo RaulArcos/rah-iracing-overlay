@@ -5,13 +5,14 @@
     <title>Lap Progress Overlay</title>
     <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='track_map', filename='track_map.css') }}">
     <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='overlay-theme.css') }}">
+    <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='race-system.css') }}">
     <script src="{{ url_for('serve_common_js', filename='overlay_theme.js') }}"></script>
     <script src="{{ url_for('overlays.serve_static', overlay_name='track_map', filename='track_map.js') }}"></script>
     <script src="{{ url_for('serve_common_js', filename='socket.io.min.js') }}"></script>
 </head>
 <body>
-    <div class="track-map-container pywebview-drag-region">
-        <div class="title">Lap Progress</div>
+    <div class="track-map-container rah-card rah-race pywebview-drag-region">
+        <div class="rah-card__header"><span class="title">Lap Progress</span><span class="rah-muted">RAH / RACE</span></div>
         <canvas id="track-map-canvas" width="320" height="320"></canvas>
     </div>
 </body>

@@ -5,12 +5,13 @@
     <title>Weather Overlay</title>
     <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='weather', filename='weather.css') }}">
     <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='overlay-theme.css') }}">
+    <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='race-system.css') }}">
     <script src="{{ url_for('serve_common_js', filename='overlay_theme.js') }}"></script>
     <script src="{{ url_for('overlays.serve_static', overlay_name='weather', filename='weather.js') }}"></script>
     <script src="{{ url_for('serve_common_js', filename='socket.io.min.js') }}"></script>
 </head>
 <body>
-    <div class="weather-container rah-card pywebview-drag-region">
+    <div class="weather-container rah-card rah-race pywebview-drag-region">
         <div class="rah-card__header">
             <span>Weather</span>
             <span id="wx-status" class="rah-status rah-status--warn">Waiting for data</span>
@@ -50,7 +51,7 @@
                 <span class="rah-status" id="wx-declared">—</span>
             </div>
         </div>
-        <div class="weather-footer">Observed at the start/finish line, not a forecast. Wind direction is the SDK angle in degrees.</div>
+        <div class="weather-footer rah-footer">Observed at the start/finish line, not a forecast. Wind direction is the SDK angle in degrees.</div>
     </div>
 </body>
 </html>

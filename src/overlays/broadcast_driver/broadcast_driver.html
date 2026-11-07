@@ -5,18 +5,19 @@
     <title>Broadcast Driver Card Overlay</title>
     <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='broadcast_driver', filename='broadcast_driver.css') }}">
     <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='overlay-theme.css') }}">
+    <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='race-system.css') }}">
     <script src="{{ url_for('serve_common_js', filename='overlay_theme.js') }}"></script>
     <script src="{{ url_for('overlays.serve_static', overlay_name='broadcast_driver', filename='broadcast_driver.js') }}"></script>
     <script src="{{ url_for('serve_common_js', filename='socket.io.min.js') }}"></script>
 </head>
 <body>
-    <div class="bd-container rah-card pywebview-drag-region">
+    <div class="bd-container rah-card rah-race pywebview-drag-region">
         <div class="rah-card__header">
             <span>Broadcast Driver</span>
             <span id="bd-status" class="rah-status rah-status--warn">Waiting for data</span>
         </div>
         <div class="bd-identity">
-            <span class="bd-number rah-num" id="bd-number">—</span>
+            <span class="bd-number rah-num rah-position" id="bd-number">—</span>
             <span class="bd-name" id="bd-name">—</span>
             <span class="rah-status" id="bd-class">—</span>
         </div>
@@ -54,7 +55,7 @@
                 <span class="rah-metric__value rah-num" id="bd-camera">—</span>
             </div>
         </div>
-        <div class="bd-footer">Follows the broadcast camera. Your own speed, pedals, RPM, gear and fuel are never shown as this driver's data.</div>
+        <div class="bd-footer rah-footer">Follows the broadcast camera. Your inputs are never shown as this driver's data.</div>
     </div>
 </body>
 </html>

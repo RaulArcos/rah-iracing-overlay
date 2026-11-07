@@ -5,12 +5,13 @@
     <title>Pit Assistant Overlay</title>
     <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='pit_assistant', filename='pit_assistant.css') }}">
     <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='overlay-theme.css') }}">
+    <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='race-system.css') }}">
     <script src="{{ url_for('serve_common_js', filename='overlay_theme.js') }}"></script>
     <script src="{{ url_for('overlays.serve_static', overlay_name='pit_assistant', filename='pit_assistant.js') }}"></script>
     <script src="{{ url_for('serve_common_js', filename='socket.io.min.js') }}"></script>
 </head>
 <body>
-    <div class="pit-container rah-card pywebview-drag-region">
+    <div class="pit-container rah-card rah-race pywebview-drag-region">
         <div class="rah-card__header">
             <span>Pit Assistant</span>
             <span id="pit-status" class="rah-status rah-status--warn">Waiting for data</span>
@@ -73,7 +74,7 @@
                 <span class="rah-metric__value pit-text rah-num" id="pit-fuel">—</span>
             </div>
         </div>
-        <div class="pit-footer">Read-only: nothing is sent to the simulator. Fuel is the requested amount, not fuel added.</div>
+        <div class="pit-footer rah-footer">Read-only: nothing is sent to the simulator. Fuel is the requested amount, not fuel added.</div>
     </div>
 </body>
 </html>

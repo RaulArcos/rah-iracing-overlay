@@ -43,3 +43,13 @@ html, body {
     justify-content: flex-end;
     margin-top: 8px;
 }
+
+.rah-race .strip-row { grid-template-columns: 1.4fr 1fr 1fr .8fr 1.1fr repeat(3, .7fr); column-gap: 8px; }
+@media (max-width: 600px) {
+    .rah-race .strip-row { grid-template-columns: repeat(4, minmax(0, 1fr)); row-gap: 12px; }
+}
+
+/* ---- v2 polish -------------------------------------------------------- */
+.rah-race .strip-row { align-items: start; }
+.rah-race .strip-small { padding-top: 5px; }
+.rah-race .strip-flag { margin-top: 3px; letter-spacing: .06em; }

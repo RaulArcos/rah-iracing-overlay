@@ -5,27 +5,28 @@
     <title>Relative Overlay</title>
     <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='relative', filename='relative.css') }}">
     <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='overlay-theme.css') }}">
+    <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='race-system.css') }}">
     <script src="{{ url_for('serve_common_js', filename='overlay_theme.js') }}"></script>
+    <script src="{{ url_for('serve_common_js', filename='race_metadata.js') }}"></script>
     <script src="{{ url_for('overlays.serve_static', overlay_name='relative', filename='relative.js') }}"></script>
     <script src="{{ url_for('serve_common_js', filename='socket.io.min.js') }}"></script>
 </head>
 <body>
-    <div class="relative-container pywebview-drag-region">
-        <div class="header">
+    <div class="relative-container rah-card rah-race pywebview-drag-region">
+        <div class="header rah-card__header">
             <span>Relative</span>
-            <span id="player-pos">P0</span>
+            <span id="player-pos">--</span>
+            <span id="rel-status" class="rah-status">Waiting for data</span>
         </div>
-        <table class="relative-table">
-            <thead>
-                <tr>
-                    <th>POS</th>
-                    <th>CAR</th>
-                    <th>DRIVER</th>
-                    <th>GAP</th>
-                </tr>
-            </thead>
-            <tbody id="relative-body"></tbody>
-        </table>
+        <div class="relative-meta"><span id="rel-conditions">--°C · -- cars</span><span id="rel-sof">SoF --</span></div>
+        <div class="relative-row relative-head" aria-hidden="true">
+            <span>Pos</span><span>Car</span><span>Driver</span><span>Lic / SR</span><span>iR</span><span>±P</span><span>Gap (s)</span>
+        </div>
+        <div id="relative-body"></div>
+        <div class="rah-footer relative-footer">
+            <span id="rel-summary">--</span>
+            <span title="SDK estimated track-location profiles; cross-class times normalized to the player class. Missing timing stays unavailable.">SDK track profile · ±P unavailable without race start</span>
+        </div>
     </div>
 </body>
 </html>

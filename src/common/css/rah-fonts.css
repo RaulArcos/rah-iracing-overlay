@@ -1,0 +1,12 @@
+/* RAH type system (matches raularcos.github.io). Bundled OFL fonts, offline-safe.
+   Antonio = display, Archivo = UI text, IBM Plex Mono = labels/metadata. */
+@font-face { font-family: 'Antonio'; font-style: normal; font-weight: 500; font-display: swap; src: url('/common/fonts/antonio-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Antonio'; font-style: normal; font-weight: 600; font-display: swap; src: url('/common/fonts/antonio-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Antonio'; font-style: normal; font-weight: 700; font-display: swap; src: url('/common/fonts/antonio-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Archivo'; font-style: normal; font-weight: 400; font-display: swap; src: url('/common/fonts/archivo-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Archivo'; font-style: normal; font-weight: 500; font-display: swap; src: url('/common/fonts/archivo-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Archivo'; font-style: normal; font-weight: 600; font-display: swap; src: url('/common/fonts/archivo-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Archivo'; font-style: normal; font-weight: 700; font-display: swap; src: url('/common/fonts/archivo-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('/common/fonts/ibm-plex-mono-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 500; font-display: swap; src: url('/common/fonts/ibm-plex-mono-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 600; font-display: swap; src: url('/common/fonts/ibm-plex-mono-latin-600-normal.woff2') format('woff2'); }

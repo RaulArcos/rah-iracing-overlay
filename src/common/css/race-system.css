@@ -1,0 +1,312 @@
+@import url('/common/css/rah-fonts.css');
+/* Opt-in broadcast primitives. Load after overlay-theme.css; see DESIGN.md.
+ *
+ * v2 refinement: softer surfaces, a thin accent rule instead of a hard red
+ * bar, proportional tabular numerals, pill status chips, calmer row striping.
+ * Every surface alpha is multiplied by --rah-bg-alpha and the header rule uses
+ * --rah-accent, both driven by /common/js/overlay_settings.js.
+ */
+:root {
+    --rah-bg-alpha: 1;
+    --rah-opacity: 1;
+    --rah-zoom: 1;
+    --rah-accent: #e2483d;
+
+    --rah-race-surface: rgb(16 17 20 / calc(.93 * var(--rah-bg-alpha)));
+    --rah-race-raised: rgb(255 255 255 / calc(.05 * var(--rah-bg-alpha)));
+    --rah-race-inset: rgb(0 0 0 / calc(.30 * var(--rah-bg-alpha)));
+    --rah-race-stripe: rgb(255 255 255 / calc(.028 * var(--rah-bg-alpha)));
+    --rah-race-ink: #f4f5f7;
+    --rah-race-dim: #a7acb8;
+    --rah-race-faint: #7d8290;
+    --rah-race-rule: rgba(255, 255, 255, .085);
+    --rah-race-rim: rgba(255, 255, 255, .10);
+    --rah-race-red: #e2483d;
+    --rah-race-gold: #f5cd5b;
+    --rah-race-green: #4fdc8a;
+    --rah-race-loss: #ff6b6b;
+    --rah-race-purple: #d77cff;
+    --rah-race-blue: #6ea8ff;
+    --rah-race-radius: 4px;
+    --rah-race-radius-sm: 3px;
+    --rah-race-font: "Archivo", "Segoe UI", "Roboto", Arial, sans-serif;
+    --rah-race-label: "IBM Plex Mono", Consolas, monospace;
+    --rah-race-display: "Antonio", "Archivo", "Segoe UI", sans-serif;
+    /* Numbers: proportional face + tabular figures reads far cleaner than a
+       code font while keeping columns perfectly still. */
+    --rah-race-mono: "Archivo", "Segoe UI", "Roboto", Arial, sans-serif;
+}
+html[data-rah-theme="glass"] {
+    --rah-race-surface: rgb(26 29 38 / calc(.62 * var(--rah-bg-alpha)));
+    --rah-race-raised: rgb(255 255 255 / calc(.06 * var(--rah-bg-alpha)));
+    --rah-race-inset: rgb(0 0 0 / calc(.16 * var(--rah-bg-alpha)));
+    --rah-race-stripe: rgb(255 255 255 / calc(.035 * var(--rah-bg-alpha)));
+    --rah-race-rule: rgba(255, 255, 255, .10);
+    --rah-race-rim: rgba(255, 255, 255, .22);
+    --rah-race-radius: 12px;
+    --rah-race-radius-sm: 6px;
+}
+
+/* Settings hooks -------------------------------------------------------- */
+body { zoom: calc(var(--rah-zoom, 1) * var(--rah-fit, 1)); }
+/* Deployed overlays never scroll; overlay_settings.js shrinks to fit instead. */
+html.rah-live, html.rah-live body { overflow: hidden !important; }
+html.rah-live *::-webkit-scrollbar, html.rah-live::-webkit-scrollbar { display: none; }
+/* Let the panel keep its natural size so the fit can measure it (no squeezing). */
+html.rah-live .rah-race.rah-card { max-width: none !important; max-height: none !important; }
+html.rah-hide-header .rah-race .rah-card__header { display: none !important; }
+html.rah-hide-footer .rah-race .rah-footer { display: none !important; }
+html.rah-embed { overflow: hidden !important; }
+html.rah-embed body { margin: 0 !important; }
+html.rah-embed #rah-demo-toolbar { display: none !important; }
+html.rah-stage {
+    min-height: 100%;
+    background: radial-gradient(70% 60% at 50% 0%, rgba(226, 72, 61, .12), transparent 70%), #0b0b0c !important;
+}
+html.rah-stage body {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    box-sizing: border-box;
+    min-height: 100%;
+    height: auto;
+    padding: 48px 24px;
+}
+
+/* Panel ------------------------------------------------------------------ */
+.rah-race, .rah-race * { box-sizing: border-box; }
+.rah-race.rah-card {
+    max-width: min(100%, var(--rah-native-w, 100%));
+    padding: 12px;
+    overflow: hidden;
+    background: var(--rah-race-surface);
+    color: var(--rah-race-ink);
+    border: 1px solid var(--rah-race-rim);
+    border-radius: var(--rah-race-radius);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
+    font-family: var(--rah-race-font);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    opacity: var(--rah-opacity, 1);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+html[data-rah-theme="glass"] .rah-race.rah-card {
+    background-color: var(--rah-race-surface);
+    background-image:
+        linear-gradient(160deg, rgb(255 255 255 / calc(.10 * var(--rah-bg-alpha))) 0%, transparent 42%),
+        linear-gradient(0deg, rgb(0 0 0 / calc(.10 * var(--rah-bg-alpha))), transparent 60%);
+    border: 1px solid var(--rah-race-rim);
+    border-radius: var(--rah-race-radius);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), inset 0 0 0 1px rgba(255, 255, 255, .03);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+}
+
+/* Header: quiet title band with a thin accent rule that fades out -------- */
+.rah-race .rah-card__header {
+    position: relative;
+    min-height: 32px;
+    margin: -12px -12px 10px;
+    padding: 8px 12px 7px;
+    border-top: 0;
+    border-bottom: 1px solid var(--rah-race-rule);
+    border-radius: 0;
+    background: linear-gradient(180deg, rgb(255 255 255 / calc(.07 * var(--rah-bg-alpha))), rgb(255 255 255 / calc(.02 * var(--rah-bg-alpha))));
+    align-items: center;
+    gap: 8px;
+    color: var(--rah-race-ink);
+    font-family: var(--rah-race-label);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: .16em;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+.rah-race .rah-card__header::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--rah-accent) 0%, var(--rah-accent) 22%,
+        color-mix(in srgb, var(--rah-accent) 35%, transparent) 60%, transparent 100%);
+    pointer-events: none;
+}
+.rah-race .rah-card__header > :first-child { min-width: 0; }
+.rah-race .rah-card__header .rah-muted { color: var(--rah-race-faint); font-weight: 600; letter-spacing: .1em; }
+.rah-race .rah-card__header .rah-status {
+    flex-shrink: 0;
+    letter-spacing: .02em;
+    text-transform: none;
+}
+
+/* Metrics ----------------------------------------------------------------- */
+.rah-race .rah-grid { column-gap: 12px; row-gap: 12px; }
+.rah-race .rah-metric {
+    gap: 3px;
+    padding-left: 9px;
+    border-left: 1px solid var(--rah-race-rule);
+}
+.rah-race .rah-metric__label {
+    color: var(--rah-race-dim);
+    font-family: var(--rah-race-label);
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: .12em;
+    line-height: 1.3;
+    text-transform: uppercase;
+}
+.rah-race .rah-metric__value {
+    color: var(--rah-race-ink);
+    font-size: 20px;
+    font-weight: 650;
+    line-height: 1.15;
+    letter-spacing: -.01em;
+}
+.rah-race .rah-metric__unit {
+    color: var(--rah-race-faint);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0;
+    margin-left: 3px;
+}
+.rah-race .rah-num {
+    font-family: var(--rah-race-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+}
+
+/* Status chips: pill in the header (with a live dot), soft tag elsewhere -- */
+.rah-race .rah-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    align-self: flex-start;
+    max-width: 100%;
+    padding: 2px 7px;
+    border: 1px solid rgba(255, 255, 255, .10);
+    border-radius: var(--rah-race-radius-sm);
+    background: rgba(255, 255, 255, .06);
+    color: var(--rah-race-dim);
+    font-size: 10.5px;
+    font-weight: 650;
+    line-height: 1.3;
+}
+.rah-race .rah-card__header .rah-status {
+    align-self: center;
+    padding: 2px 8px 2px 7px;
+    border-radius: 999px;
+    font-family: var(--rah-race-label);
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+.rah-race .rah-card__header .rah-status::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: .9;
+}
+.rah-race .rah-status--ok { color: var(--rah-race-green); background: rgba(79, 220, 138, .12); border-color: rgba(79, 220, 138, .26); }
+.rah-race .rah-status--warn { color: var(--rah-race-gold); background: rgba(245, 205, 91, .11); border-color: rgba(245, 205, 91, .26); }
+.rah-race .rah-status--bad { color: var(--rah-race-loss); background: rgba(255, 107, 107, .12); border-color: rgba(255, 107, 107, .28); }
+.rah-race .rah-card__header .rah-status--ok::before { box-shadow: 0 0 6px var(--rah-race-green); }
+
+/* Footer ------------------------------------------------------------------ */
+.rah-race .rah-footer {
+    margin-top: 10px;
+    padding-top: 7px;
+    border-top: 1px solid var(--rah-race-rule);
+    color: var(--rah-race-faint);
+    font-size: 10.5px;
+    line-height: 1.45;
+    opacity: 1;
+}
+
+/* Table primitives -------------------------------------------------------- */
+.rah-position {
+    display: inline-grid;
+    place-items: center;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 4px;
+    border-radius: 3px;
+    background: var(--rah-race-ink);
+    color: #121317;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+.rah-class-mark { border-left: 3px solid var(--rah-class-color, var(--rah-race-rule)); }
+.rah-badge { padding: 2px 5px; border-radius: 3px; font-size: 11px; font-weight: 700; }
+/* Opt-in roster badges: SDK colors are validated before setting these vars. */
+.rah-race .race-license {
+    border-left: 3px solid var(--rah-license-color, var(--rah-race-rule));
+    border-radius: 3px;
+    background: rgba(255, 255, 255, .07);
+    color: var(--rah-race-ink);
+    white-space: nowrap;
+}
+.rah-race .race-rating {
+    border-radius: 3px;
+    background: rgba(255, 255, 255, .88);
+    color: #15161a;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.rah-race .race-gain { color: var(--rah-race-faint); }
+.rah-table-row { background: transparent; transition: background-color .2s ease; }
+.rah-table-row:nth-child(even) { background: var(--rah-race-stripe); }
+.rah-player {
+    box-shadow: inset 2px 0 var(--rah-race-gold);
+    background: linear-gradient(90deg, rgba(245, 205, 91, .20), rgba(245, 205, 91, .06) 70%) !important;
+}
+.rah-race .rah-best { color: var(--rah-race-purple); }
+.rah-race .rah-improved { color: var(--rah-race-green); }
+.rah-race .rah-slower { color: var(--rah-race-loss); }
+.rah-race .rah-muted { color: var(--rah-race-dim); }
+
+/* Overlay-specific shared bits ------------------------------------------- */
+.rah-race .fuel-small,
+.rah-race .strip-small,
+.rah-race .pit-text,
+.rah-race .weather-text,
+.rah-race .bd-text { font-size: 14px; font-weight: 650; letter-spacing: 0; }
+.rah-race .bd-identity {
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--rah-race-rule);
+}
+.rah-race .bd-name { font-family: var(--rah-race-display); font-size: 30px; font-weight: 600; letter-spacing: .01em; text-transform: uppercase; }
+.rah-race .bd-number { min-width: 48px; min-height: 48px; font-family: var(--rah-race-display); font-size: 26px; border-radius: 3px; }
+.rah-race .bd-grid { row-gap: 10px; }
+.rah-race .bd-footer { margin-top: 10px; padding-top: 6px; }
+.rah-race .rah-card__header .title { margin: 0; font-size: 10.5px; font-weight: 500; }
+.rah-race .rah-footer { font-family: var(--rah-race-font); }
+@media (prefers-reduced-motion: reduce) {
+    .rah-race * { animation: none !important; transition: none !important; }
+}
+html.rah-stage #rah-demo-toolbar {
+    background: rgba(11, 11, 12, .82);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(255, 255, 255, .09);
+    color: #9a9a95;
+    font: 500 11px/1.5 "IBM Plex Mono", Consolas, monospace;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+html.rah-stage #rah-demo-toolbar button {
+    border: 1px solid rgba(255, 255, 255, .22);
+    background: none;
+    color: #ededea;
+    font: inherit;
+    letter-spacing: .12em;
+    transition: background-color .2s, color .2s;
+}
+html.rah-stage #rah-demo-toolbar button:hover { background: #ededea; color: #0b0b0c; }
+/* Player profile remembered from an online session (shown in AI sessions) */
+.rah-race .race-rating.is-last-known { background: rgba(255, 255, 255, .55); }
+.rah-race .race-license.is-last-known { opacity: .8; }

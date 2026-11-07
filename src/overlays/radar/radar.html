@@ -2,21 +2,32 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Radar Overlay</title>
     <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='radar', filename='radar.css') }}">
     <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='overlay-theme.css') }}">
+    <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='race-system.css') }}">
     <script src="{{ url_for('serve_common_js', filename='overlay_theme.js') }}"></script>
     <script src="{{ url_for('overlays.serve_static', overlay_name='radar', filename='radar.js') }}"></script>
     <script src="{{ url_for('serve_common_js', filename='socket.io.min.js') }}"></script>
 </head>
 <body>
-    <div class="radar-container pywebview-drag-region">
-        <div class="radar-header">Radar</div>
-        <div class="alerts">
-            <div id="left-alert" class="alert">LEFT</div>
-            <div id="right-alert" class="alert">RIGHT</div>
+    <div id="proximity-panel" class="radar-container rah-race rah-card pywebview-drag-region">
+        <div class="radar-header rah-card__header"><span>Radar</span><span>PROXIMITY</span></div>
+        <div id="radar-status" class="proximity-status" role="status">Spotter unavailable</div>
+        <div class="radar-scene">
+            <div class="distance-bar ahead-bar"><span>AHEAD</span><strong id="ahead-distance">-- m</strong><div class="bar-track"><div id="ahead-fill" class="proximity-fill"></div></div></div>
+            <div class="crosshair" title="Longitudinal lap-progress estimates only. All cars share one axis; no lateral coordinates. Side warnings are aggregate spotter alerts, not identified cars.">
+                <div id="left-alert" class="alert">LEFT ?</div>
+                <div class="traffic-axis"><span class="range-top">+100 m</span><span class="range-bottom">−100 m</span><div class="own-car" aria-label="Your car"></div><span class="own-label">YOU</span><div id="traffic-markers" aria-label="Longitudinal nearby cars"></div></div>
+                <div id="right-alert" class="alert">RIGHT ?</div>
+            </div>
+            <div class="distance-bar behind-bar"><span>BEHIND</span><strong id="behind-distance">-- m</strong><div class="bar-track"><div id="behind-fill" class="proximity-fill"></div></div></div>
         </div>
-        <div id="nearby-list" class="nearby-list"></div>
+        <div class="distance-notes"><span id="ahead-meta">No distance data</span><span id="behind-meta">No distance data</span></div>
+        <div id="distance-source" class="proximity-source">~ Lap progress × track length · 100 m bars</div>
+        <div id="traffic-range" class="traffic-legend">Longitudinal only · ±100 m</div>
+        <div id="nearby-list" class="nearby-list" aria-label="Nearby lap-progress estimates"></div>
     </div>
 </body>
 </html>

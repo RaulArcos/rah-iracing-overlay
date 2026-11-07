@@ -1,60 +1,100 @@
-html, body {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0);
-}
+html, body { margin: 0; padding: 0; background: transparent; }
+html .rah-race.radar-container { width: 320px; max-width: 100%; padding: 8px; cursor: move; }
+html .rah-race.radar-container .rah-card__header { margin: -8px -8px 4px; padding: 4px 8px; min-height: 28px; display: flex; justify-content: space-between; }
+html .rah-race .radar-header > :last-child { color: var(--rah-race-dim); font-size: 9px; }
+.rah-race .proximity-status { text-align: center; font-size: 11px; line-height: 16px; color: var(--rah-race-gold); font-weight: 700; }
+.rah-race .radar-scene { display: grid; grid-template-columns: 64px minmax(0,1fr) 64px; height: 98px; gap: 4px; }
+.rah-race .distance-bar { display: grid; grid-template-rows: 12px 20px 1fr; justify-items: center; font-size: 9px; color: var(--rah-race-dim); }
+.rah-race .distance-bar strong { color: var(--rah-race-ink); font: 700 15px var(--rah-race-mono); }
+.rah-race .bar-track { position: relative; width: 16px; height: 62px; background: var(--rah-race-raised); border: 1px solid var(--rah-race-rule); border-radius: var(--rah-race-radius); overflow: hidden; }
+.rah-race .proximity-fill { position: absolute; bottom: 0; width: 100%; height: 0; background: linear-gradient(0deg, #a96a16, #f2ca52); }
+.rah-race .behind-bar .proximity-fill { background: linear-gradient(0deg, #ae3824, #ff9870); }
+.rah-race .crosshair { position: relative; display: flex; align-items: center; justify-content: center; gap: 2px; }
+.rah-race .crosshair::before, .rah-race .crosshair::after { content: ''; position: absolute; background: #aeb7c170; pointer-events: none; }
+.rah-race .crosshair::before { width: 1px; top: 5px; bottom: 16px; left: 50%; }
+.rah-race .crosshair::after { height: 1px; left: 4px; right: 4px; top: 50%; }
+.rah-race .own-car { width: 14px; height: 30px; background: white; border-radius: 2px; z-index: 1; box-shadow: 0 0 8px #fff3; flex-shrink: 0; }
+.rah-race .own-label { position: absolute; bottom: 0; color: var(--rah-race-dim); font-size: 9px; }
+html .rah-race.radar-container .alert { display: grid; place-items: end center; width: calc(50% - 10px); height: 54px; padding: 2px 2px 6px; border: 0; border-radius: 2px; background: transparent; color: var(--rah-race-dim); font-size: 9px; text-align: center; font-weight: 700; }
+html .rah-race.radar-container .alert.active { background: radial-gradient(ellipse, #ed2727c9, #ed272718 75%, transparent); box-shadow: 0 0 14px #ed272740; color: white; }
+html .rah-race.radar-container.both-active .alert.active { background: radial-gradient(ellipse, #ff2929, #ed272750 75%, transparent); box-shadow: 0 0 18px #ed272785; }
+.rah-race .distance-notes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 9px; line-height: 12px; color: var(--rah-race-dim); text-align: center; margin-top: 3px; }
+.rah-race .proximity-source { border-top: 1px solid var(--rah-race-rule); margin-top: 4px; padding-top: 3px; font-size: 10px; text-align: center; color: var(--rah-race-dim); }
+/* Retained accessible legacy list; visible bars provide the nearest two values. */
+.rah-race .nearby-list { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 
-.radar-container {
-    width: 300px;
-    background: rgba(15, 15, 15, 0.82);
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    color: #f1f1f1;
-    font-family: Arial, sans-serif;
-    padding: 10px;
-    cursor: move;
+/* ---- v2 polish -------------------------------------------------------- */
+html .rah-race.radar-container { padding: 10px; }
+html .rah-race.radar-container .rah-card__header { margin: -10px -10px 6px; padding: 8px 10px 7px; min-height: 32px; }
+html .rah-race .radar-header > :last-child { color: var(--rah-race-faint); font-size: 10px; letter-spacing: .1em; }
+.rah-race .proximity-status { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 2px; }
+.rah-race .distance-bar { font-size: 9px; letter-spacing: .08em; font-weight: 650; }
+.rah-race .distance-bar strong { font: 700 15px var(--rah-race-font); font-variant-numeric: tabular-nums; }
+.rah-race .bar-track { width: 12px; border: 0; border-radius: 999px; background: rgba(255,255,255,.07); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+.rah-race .proximity-fill { border-radius: 999px; background: linear-gradient(0deg, #d18a1e, #f5cd5b); }
+.rah-race .behind-bar .proximity-fill { background: linear-gradient(0deg, #d1452f, #ff9b7a); }
+.rah-race .crosshair::before, .rah-race .crosshair::after { background: rgba(255,255,255,.12); }
+.rah-race .own-car {
+    width: 16px; height: 32px; border-radius: 6px 6px 4px 4px;
+    background: linear-gradient(180deg, #ffffff 0 22%, #c9ced8 22% 40%, #ffffff 40%);
+    box-shadow: 0 0 0 2px rgba(0,0,0,.35), 0 0 12px rgba(255,255,255,.25);
 }
+html .rah-race.radar-container .alert { border-radius: 8px; color: var(--rah-race-faint); letter-spacing: .06em; }
+html .rah-race.radar-container #left-alert.active { background: linear-gradient(90deg, transparent, rgba(255,77,77,.85)); box-shadow: none; color: #fff; }
+html .rah-race.radar-container #right-alert.active { background: linear-gradient(270deg, transparent, rgba(255,77,77,.85)); box-shadow: none; color: #fff; }
+html .rah-race.radar-container.both-active .alert.active { box-shadow: 0 0 16px rgba(255,60,60,.45); }
+.rah-race .distance-notes { color: var(--rah-race-faint); margin-top: 4px; }
+.rah-race .proximity-source { color: var(--rah-race-faint); margin-top: 6px; padding-top: 5px; }
 
-.radar-header {
-    text-align: center;
-    font-weight: 700;
-    margin-bottom: 8px;
-}
+/* Longitudinal schematic: glyph centres never imply a lateral lane. */
+.rah-race .radar-scene { grid-template-columns: 54px minmax(0,1fr) 54px; height: 114px; }
+.rah-race .crosshair::before, .rah-race .crosshair::after { display: none; }
+.rah-race .traffic-axis { position: absolute; inset: 0; border-block: 1px solid var(--rah-race-rule); }
+.rah-race .traffic-axis::before { content: ''; position: absolute; left: 50%; top: 10%; bottom: 10%; border-left: 1px dashed var(--rah-race-dim); opacity: .45; }
+.rah-race .traffic-axis::after { content: ''; position: absolute; left: 18%; right: 18%; top: 50%; border-top: 1px solid var(--rah-race-rule); }
+.rah-race .traffic-axis .own-car { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 20px; height: 26px; border: 2px solid var(--rah-race-gold); z-index: 1; }
+.rah-race .traffic-axis .own-label { left: calc(50% - 42px); top: calc(50% - 6px); bottom: auto; color: var(--rah-race-gold); font-size: 10px; font-weight: 700; }
+.rah-race .range-top, .rah-race .range-bottom { position: absolute; left: 0; font-size: 9px; color: var(--rah-race-dim); }
+.rah-race .range-top { top: 0; }
+.rah-race .range-bottom { bottom: 0; }
+.rah-race #traffic-markers { position: absolute; inset: 0; z-index: 2; }
+.rah-race .traffic-car { position: absolute; left: calc(50% - 10px); transform: translateY(-50%); padding-left: 23px; width: calc(50% + 10px); height: 24px; font-size: 10px; line-height: 24px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--rah-race-ink); }
+.rah-race .traffic-car::before { content: ''; position: absolute; left: 3px; top: 50%; transform: translateY(-50%); width: 14px; height: 18px; border: 2px solid #86d5ff; border-radius: 4px 4px 2px 2px; background: linear-gradient(#173544 25%, #86d5ff 25% 40%, #173544 40%); }
+.rah-race .traffic-group { font-size: 9px; }
+.rah-race .traffic-group::before { box-shadow: 0 0 0 2px #101114, 0 0 0 3px #86d5ff; }
+html .rah-race.radar-container .alert { position: absolute; top: 15px; bottom: 12px; height: auto; width: 32px; font-size: 8px; padding: 0 1px; pointer-events: none; }
+html .rah-race.radar-container #left-alert { left: 0; }
+html .rah-race.radar-container #right-alert { right: 0; }
+.rah-race .traffic-legend { font-size: 10px; line-height: 14px; text-align: center; color: var(--rah-race-dim); margin-top: 4px; border-top: 1px solid var(--rah-race-rule); padding-top: 3px; }
+/* Detailed estimates remain accessible; the short legend owns visible space. */
+.rah-race .distance-notes, .rah-race .proximity-source { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.rah-race .distance-bar strong { white-space: nowrap; font-size: 14px; }
 
-.alerts {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 8px;
+/* ---- v3: slimmer car glyphs, no side-alert column --------------------- */
+/* Side alerts (iRacing CarLeftRight) are hidden: the column of LEFT/RIGHT
+   labels and the status line only cost space. A real alert still shows as a
+   compact red banner over the scene, then disappears. */
+html .rah-race.radar-container .alert { display: none !important; }
+.rah-race .proximity-status { display: none; }
+.rah-race.radar-container.side-alert .proximity-status {
+    display: block; position: absolute; left: 50%; top: 42px; z-index: 4;
+    transform: translateX(-50%);
+    padding: 2px 10px; border-radius: 999px;
+    background: rgba(255, 77, 77, .9); color: #fff;
+    font-size: 10px; letter-spacing: .1em;
+    box-shadow: 0 0 14px rgba(255, 60, 60, .45);
 }
-
-.alert {
-    flex: 1;
-    text-align: center;
-    padding: 8px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    font-weight: 700;
+.rah-race .radar-scene { margin-top: 4px; }
+/* Thinner cars: narrow body, 1.5px outline, small windscreen band */
+.rah-race .traffic-axis .own-car {
+    width: 10px; height: 22px; border-width: 1.5px; border-radius: 4px 4px 3px 3px;
+    background: linear-gradient(180deg, #fff 0 22%, rgba(255,255,255,.55) 22% 38%, #fff 38%);
+    box-shadow: 0 0 10px rgba(245, 205, 91, .35);
 }
-
-.alert.active {
-    background: rgba(231, 76, 60, 0.9);
-    border-color: rgba(255, 255, 255, 0.25);
+.rah-race .traffic-axis .own-label { left: calc(50% - 36px); }
+.rah-race .traffic-car { left: calc(50% - 5px); padding-left: 16px; }
+.rah-race .traffic-car::before {
+    left: 1px; width: 8px; height: 16px; border-width: 1.5px; border-radius: 3px 3px 2px 2px;
+    background: linear-gradient(#173544 22%, #86d5ff 22% 38%, #173544 38%);
 }
-
-.nearby-list {
-    font-size: 12px;
-    max-height: 100px;
-    overflow: hidden;
-}
-
-.nearby-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 3px 2px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
+.rah-race .traffic-group::before { box-shadow: 0 0 0 1.5px #101114, 0 0 0 2.5px #86d5ff; }

@@ -1,54 +1,35 @@
-html, body {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0);
-}
+html, body { margin: 0; padding: 0; background: transparent; }
+html .rah-race.blindspot-container { display: block; width: 380px; max-width: 100%; padding: 8px; cursor: move; }
+html .rah-race.blindspot-container .rah-card__header { margin: -8px -8px 6px; min-height: 28px; padding: 4px 8px; display: flex; justify-content: space-between; }
+.rah-race.blindspot-container .rah-card__header > :last-child { font-size: 9px; color: var(--rah-race-dim); }
+.rah-race .blindspot-body { display: grid; grid-template-columns: 84px minmax(0,1fr) 84px; gap: 8px; align-items: center; }
+html .rah-race.blindspot-container .zone { width: auto; height: 68px; padding: 5px; border: 1px solid #878787; border-radius: 2px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: space-between; font-size: 10px; font-weight: 800; color: var(--rah-race-dim); position: relative; }
+html .rah-race.blindspot-container .zone::before { content: 'BLIND SPOT'; position: absolute; top: -5px; font-size: 8px; padding: 0 3px; background: var(--rah-race-surface); }
+.rah-race .tile-light { display: block; width: 42px; height: 36px; margin-top: 4px; background: linear-gradient(135deg, #363636, #232323); border: 1px solid #4c4c4c; border-radius: 4px; }
+html .rah-race.blindspot-container .zone.active { background: transparent; border-color: #ffbe56; color: #ffd18a; }
+.rah-race .zone.active .tile-light { background: #ffad18; border-color: #ffce71; box-shadow: 0 0 17px #ff99009c; }
+html .rah-race.blindspot-container.both-active .zone.active { border-color: #ff6868; color: #ffb3a9; }
+.rah-race.both-active .zone.active .tile-light { background: #ff4c35; border-color: #ff9c7c; box-shadow: 0 0 20px #ff3528bb; }
+html[data-rah-theme="glass"] .rah-race.blindspot-container .zone { border-radius: 6px; }
+html[data-rah-theme="glass"] .rah-race .tile-light { border-radius: 10px; }
+.rah-race .center-zone { min-width: 0; text-align: center; }
+html .rah-race.blindspot-container .status-msg { margin: 0; font-size: 12px; line-height: 16px; font-weight: 800; overflow-wrap: anywhere; }
+.rah-race .spotter-source { margin-top: 5px; font-size: 9px; color: var(--rah-race-dim); }
 
-.blindspot-container {
-    width: 360px;
-    display: flex;
-    align-items: center;
-    background: rgba(15, 15, 15, 0.82);
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    color: #f1f1f1;
-    font-family: Arial, sans-serif;
-    padding: 10px;
-    cursor: move;
-    gap: 8px;
+/* ---- v2 polish -------------------------------------------------------- */
+html .rah-race.blindspot-container { padding: 10px; }
+html .rah-race.blindspot-container .rah-card__header { margin: -10px -10px 8px; padding: 8px 10px 7px; min-height: 32px; }
+.rah-race.blindspot-container .rah-card__header > :last-child { font-size: 10px; color: var(--rah-race-faint); letter-spacing: .1em; }
+html .rah-race.blindspot-container .zone {
+    height: 64px; padding: 6px 6px 5px; border: 1px solid rgba(255,255,255,.10); border-radius: 8px;
+    background: rgba(255,255,255,.04); letter-spacing: .06em; color: var(--rah-race-faint);
+    transition: border-color .15s ease, background-color .15s ease;
 }
-
-.zone {
-    width: 80px;
-    text-align: center;
-    padding: 12px 0;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    font-weight: 700;
-}
-
-.zone.active {
-    background: rgba(231, 76, 60, 0.9);
-    border-color: rgba(255, 255, 255, 0.25);
-}
-
-.center-zone {
-    flex: 1;
-    text-align: center;
-}
-
-.title {
-    font-size: 12px;
-    color: #bdbdbd;
-}
-
-.status-msg {
-    margin-top: 6px;
-    font-size: 18px;
-    font-weight: 700;
-}
+html .rah-race.blindspot-container .zone::before { content: none; }
+.rah-race .tile-light { width: 46px; height: 32px; margin-top: 0; border: 0; border-radius: 6px; background: rgba(255,255,255,.07); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); transition: background-color .15s ease, box-shadow .15s ease; }
+html .rah-race.blindspot-container .zone.active { background: rgba(255,173,24,.10); border-color: rgba(255,190,86,.6); color: #ffd18a; }
+.rah-race .zone.active .tile-light { background: linear-gradient(180deg, #ffc24a, #ff9d00); box-shadow: 0 0 18px rgba(255,153,0,.55); }
+html .rah-race.blindspot-container.both-active .zone.active { background: rgba(255,77,77,.10); border-color: rgba(255,107,107,.65); color: #ffb3a9; }
+.rah-race.both-active .zone.active .tile-light { background: linear-gradient(180deg, #ff6b55, #ff3528); box-shadow: 0 0 20px rgba(255,53,40,.6); }
+html .rah-race.blindspot-container .status-msg { font-size: 12.5px; letter-spacing: .04em; }
+.rah-race .spotter-source { color: var(--rah-race-faint); }

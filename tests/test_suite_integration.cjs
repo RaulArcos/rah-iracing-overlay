@@ -16,7 +16,7 @@ const vm = require('node:vm');
 
 const repoRoot = path.resolve(__dirname, '..');
 const OVERLAYS = ['fuel_finish', 'session_strip', 'battle_pace', 'standings',
-    'pit_assistant', 'weather', 'broadcast_driver'];
+    'pit_assistant', 'weather', 'broadcast_driver', 'delta'];
 const STALE_AFTER_MS = 3000;
 const UNRENDERABLE = /\b(NaN|undefined|Infinity|null)\b|\[object/;
 
@@ -28,6 +28,7 @@ function makeElement(id) {
         innerHTML: '',
         children: [],
         classes,
+        style: { setProperty() {} },
         classList: {
             add(name) { classes.add(name); },
             remove(name) { classes.delete(name); },
@@ -75,6 +76,9 @@ function loadOverlay(name, theme) {
         clearInterval() {},
     };
     vm.createContext(sandbox);
+    if (name === 'standings') {
+        vm.runInContext(fs.readFileSync(path.join(repoRoot, 'src/common/js/race_metadata.js'), 'utf8'), sandbox);
+    }
     const relativePath = `src/overlays/${name}/static/${name}.js`;
     vm.runInContext(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8'), sandbox, { filename: relativePath });
     readyHandler();
@@ -105,7 +109,7 @@ const digitsOutsidePlaceholders = (texts) => texts.join('|').replace(/\b0 laps\b
 test('backend wire dump covers every new overlay in every scenario', options, () => {
     assert.deepEqual(Object.keys(wire).sort(), ['live', 'missing_sections', 'sdk_empty']);
     for (const scenario of ['live', 'sdk_empty']) {
-        assert.equal(Object.keys(wire[scenario]).length, 13, `${scenario}: all 13 overlays receive an event`);
+        assert.equal(Object.keys(wire[scenario]).length, 14, `${scenario}: all 14 overlays receive an event`);
     }
     assert.deepEqual(Object.keys(wire.missing_sections).sort(), [...OVERLAYS].sort());
     assert.equal(wire.live.input_telemetry.gear, 4, 'legacy input event rides the same tick');

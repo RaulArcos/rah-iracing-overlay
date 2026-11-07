@@ -5,24 +5,28 @@
     <title>Multiclass Standings Overlay</title>
     <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='standings', filename='standings.css') }}">
     <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='overlay-theme.css') }}">
+    <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='race-system.css') }}">
     <script src="{{ url_for('serve_common_js', filename='overlay_theme.js') }}"></script>
+    <script src="{{ url_for('serve_common_js', filename='race_metadata.js') }}"></script>
     <script src="{{ url_for('overlays.serve_static', overlay_name='standings', filename='standings.js') }}"></script>
     <script src="{{ url_for('serve_common_js', filename='socket.io.min.js') }}"></script>
 </head>
 <body>
-    <div class="standings-container rah-card pywebview-drag-region">
+    <div class="standings-container rah-card rah-race pywebview-drag-region">
         <div class="rah-card__header">
             <span>Standings <span id="st-session">--</span></span>
             <span id="st-status" class="rah-status rah-status--warn">Waiting for data</span>
         </div>
         <div class="rah-row st-row st-head">
-            <span>Pos</span><span>Cls</span><span>#</span><span>Driver</span><span>Lap</span>
-            <span>Best</span><span>Last</span><span>Gap</span><span>Int</span><span></span>
+            <span class="st-overall">Pos</span><span class="st-class">Cls</span><span class="st-number">#</span><span class="st-name">Driver</span><span class="st-lap">Lap</span>
+            <span class="st-best">Best</span><span class="st-last">Last</span><span class="st-gap">Gap</span><span class="st-int">Int</span><span class="st-pit"></span>
+            <span class="race-license">Lic / SR</span><span class="race-rating">iR</span><span class="race-gain">±P</span>
         </div>
         <div id="st-groups"></div>
-        <div class="st-footer">
+        <div class="st-footer rah-footer">
+            <span id="st-summary">--</span>
             <span id="st-basis">--</span>
-            <span class="st-note">Gap: seconds behind the overall leader. Int: to the car ahead in the class.</span>
+            <span class="st-note">Gap: overall leader · Int: class ahead · ±P: start gain</span>
         </div>
     </div>
 </body>

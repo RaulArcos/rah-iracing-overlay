@@ -155,3 +155,152 @@ html, body {
     font-weight: bold !important;
     color: white !important;
 }
+
+/* ---- Broadcast skin (v2) ------------------------------------------------ */
+.telemetry-container.rah-race {
+    width: 624px;
+    --it-throttle: var(--rah-race-green);
+    --it-brake: var(--rah-race-red);
+    --it-clutch: var(--rah-race-blue);
+}
+.rah-race .telemetry-content { height: 100px; gap: 12px; align-items: stretch; }
+.rah-race .it-graph {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+    border-radius: var(--rah-race-radius-sm);
+    background: var(--rah-race-inset);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .05);
+    overflow: hidden;
+}
+.rah-race #telemetry-graph {
+    display: block;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+html[data-rah-theme="glass"] .rah-race #telemetry-graph { background: transparent; border: 0; }
+
+.rah-race .telemetry-bars {
+    flex: 0 0 auto;
+    width: auto;
+    height: 100px;
+    margin: 0;
+    gap: 6px;
+}
+.rah-race .it-pedal {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    width: 24px;
+}
+.rah-race .it-pedal__value {
+    height: 11px;
+    color: var(--rah-race-dim);
+    font-size: 9.5px;
+    font-weight: 700;
+    line-height: 11px;
+}
+.rah-race .it-pedal__label {
+    height: 11px;
+    font-family: var(--rah-race-label);
+    color: var(--rah-race-faint);
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    line-height: 11px;
+}
+.rah-race .bar {
+    flex: 1 1 auto;
+    width: 100%;
+    height: auto;
+    margin: 0 !important;
+    padding: 0;
+    border: 0;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, .06);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06);
+}
+html[data-rah-theme="glass"] .rah-race .bar { border: 0; }
+.rah-race .bar-fill {
+    left: 0;
+    border-radius: 3px;
+    background: linear-gradient(180deg, color-mix(in srgb, currentColor 100%, white 18%), currentColor);
+    box-shadow: 0 0 10px color-mix(in srgb, currentColor 45%, transparent);
+    transition: none;
+}
+.rah-race #clutch-bar { color: var(--it-clutch); }
+.rah-race #brake-bar { color: var(--it-brake); }
+.rah-race #throttle-bar { color: var(--it-throttle); }
+.rah-race .it-pedal--clutch .it-pedal__label { color: var(--it-clutch); }
+.rah-race .it-pedal--brake .it-pedal__label { color: var(--it-brake); }
+.rah-race .it-pedal--throttle .it-pedal__label { color: var(--it-throttle); }
+
+.rah-race .telemetry-right { flex: 0 0 auto; min-width: 0; padding: 0; }
+.rah-race .gear-steering-container { height: 100%; gap: 10px; }
+.rah-race .gear-speed-container {
+    min-width: 72px;
+    justify-content: center;
+    padding: 0 4px;
+}
+.rah-race #gear-display {
+    width: auto;
+    color: var(--rah-race-ink);
+    font-family: var(--rah-race-display);
+    font-size: 54px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    letter-spacing: -.02em;
+}
+.rah-race #speed-display {
+    width: auto;
+    margin-top: 4px;
+    color: var(--rah-race-dim);
+    font-family: var(--rah-race-label);
+    font-size: 11px;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .02em;
+    white-space: nowrap;
+}
+.rah-race .it-wheel {
+    display: grid;
+    place-items: center;
+    width: 92px;
+    height: 92px;
+    flex-shrink: 0;
+}
+/* Keep the photo's real aspect ratio: never force a square box on it. */
+.rah-race .steering-wheel-icon {
+    display: block;
+    width: 92px;
+    max-width: 92px;
+    height: auto;
+    max-height: none;
+    object-fit: contain;
+    transform-origin: 50% 50%;
+    transition: none;
+    will-change: transform;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .45));
+}
+
+/* User-selectable parts (launcher → Settings → Show) */
+html.rah-no-graph .rah-race .it-graph { display: none; }
+html.rah-no-graph .telemetry-container.rah-race { width: auto; display: inline-block; }
+html.rah-no-pedals .rah-race .telemetry-bars { display: none; }
+html.rah-no-clutch .rah-race .it-pedal--clutch { display: none; }
+html.rah-no-pedal_values .rah-race .it-pedal__value { visibility: hidden; }
+html.rah-no-wheel .rah-race .it-wheel { display: none; }
+html.rah-no-speed .rah-race #speed-display { display: none; }
+html.rah-no-gear .rah-race .gear-speed-container { display: none; }
+
+@media (max-width: 480px) {
+    .rah-race .it-wheel { display: none; }
+    .rah-race .telemetry-bars { gap: 4px; }
+    .rah-race .it-pedal { width: 18px; }
+}

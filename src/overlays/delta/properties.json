@@ -1,0 +1,16 @@
+{
+    "name": "delta",
+    "display_name": "Delta",
+    "description": "F1-style qualifying timer: running lap time, live delta to your best lap and sectors in purple, green or yellow.",
+    "resolution": {
+        "width": 480,
+        "height": 200
+    },
+    "position": {
+        "x": 0,
+        "y": 0
+    },
+    "dpi_info": {
+        "scale": 1
+    }
+}

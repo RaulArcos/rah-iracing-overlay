@@ -30,3 +30,25 @@ html, body {
     background: rgba(30, 30, 30, 0.6);
     border-radius: 8px;
 }
+
+.rah-race #track-map-canvas {
+    display: block;
+    width: 288px;
+    max-width: 100%;
+    height: auto;
+    margin: auto;
+    border: 0;
+    border-radius: 2px;
+    background: var(--rah-race-inset);
+}
+
+/* v2: ring sits on the panel itself; the centre carries the player readout */
+.rah-race.track-map-container { text-align: left; }
+.rah-race #track-map-canvas {
+    width: 300px;
+    height: 300px;
+    margin: 2px auto 0;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 50%, var(--rah-race-inset) 0 58%, transparent 72%);
+}
+html[data-rah-theme="glass"] .rah-race #track-map-canvas { border: 0; background: radial-gradient(circle at 50% 50%, var(--rah-race-inset) 0 58%, transparent 72%); }

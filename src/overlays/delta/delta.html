@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Delta Overlay</title>
+    <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='delta', filename='delta.css') }}">
+    <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='overlay-theme.css') }}">
+    <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='race-system.css') }}">
+    <script src="{{ url_for('serve_common_js', filename='overlay_theme.js') }}"></script>
+    <script src="{{ url_for('overlays.serve_static', overlay_name='delta', filename='delta.js') }}"></script>
+    <script src="{{ url_for('serve_common_js', filename='socket.io.min.js') }}"></script>
+</head>
+<body>
+    <div class="delta-container rah-card rah-race pywebview-drag-region">
+        <div class="rah-card__header">
+            <span>Delta</span>
+            <span class="dl-head-right"><span id="dl-lap" class="dl-lap">Lap --</span><span id="dl-status" class="rah-status rah-status--warn">Waiting for data</span></span>
+        </div>
+        <div class="dl-main">
+            <div id="dl-time-box" class="dl-time-box">
+                <span id="dl-time" class="dl-time">--:--.---</span>
+                <span id="dl-time-note" class="dl-time-note">Lap time</span>
+            </div>
+            <div id="dl-delta" class="dl-delta">
+                <span class="dl-delta__label">Δ Best</span>
+                <span id="dl-delta-value" class="dl-delta__value">--.---</span>
+                <div id="dl-split" class="dl-split" aria-live="polite"></div>
+            </div>
+        </div>
+        <div class="dl-bar" aria-hidden="true">
+            <div class="dl-bar__scale"><span>-1.0</span><span>0</span><span>+1.0</span></div>
+            <div class="dl-bar__track"><div id="dl-bar-fill" class="dl-bar__fill"></div></div>
+        </div>
+        <div id="dl-sectors" class="dl-sectors"></div>
+    </div>
+</body>
+</html>

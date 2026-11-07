@@ -1,69 +1,78 @@
-html, body {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0);
-}
-
-.standings-container {
-    width: 620px;
-    box-sizing: border-box;
-    cursor: move;
-    pointer-events: auto;
-    user-select: none;
-}
-
-/* Compound selector: the shared stylesheet loads later and also styles .rah-row. */
-.rah-row.st-row {
+html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0); }
+.standings-container.rah-race { width: 660px; max-height: 100vh; display: flex; flex-direction: column; cursor: move; user-select: none; }
+.rah-race .rah-row.st-row {
     display: grid;
-    grid-template-columns: 34px 34px 44px minmax(0, 1fr) 34px 74px 74px 66px 62px 30px;
-    column-gap: 6px;
-    align-items: center;
-    font-size: 12px;
+    grid-template-columns: 26px 26px 32px minmax(0, 1fr) 28px 50px 38px 24px 55px 55px 64px 22px;
+    grid-template-areas: 'pos cls num name lap lic ir gain gap int last pit';
+    gap: 2px; align-items: center; padding: 0; min-height: 27px; font-size: 11px;
+    border-bottom: 1px solid var(--rah-race-rule);
+}
+.st-overall { grid-area: pos; color: var(--rah-race-dim); font-size: 10px; }
+.st-class { grid-area: cls; }
+.st-number { grid-area: num; background: var(--rah-class-color, #3d4654); color: #fff; text-shadow: 0 1px 2px #000, 0 0 2px #000; text-align: center; padding: 5px 1px; font-weight: 800; }
+.st-name { grid-area: name; overflow-wrap: anywhere; font-family: var(--rah-race-font) !important; font-weight: 650; }
+.st-lap { grid-area: lap; color: var(--rah-race-dim); }
+.st-best { display: none; }
+.st-last { grid-area: last; text-align: right; }
+.st-gap { grid-area: gap; text-align: right; }
+.st-int { grid-area: int; text-align: right; }
+.st-pit { grid-area: pit; color: var(--rah-race-gold); font-size: 9px; }
+.race-license { grid-area: lic; }
+.race-rating { grid-area: ir; }
+.race-gain { grid-area: gain; text-align: center; }
+.st-row > span { min-width: 0; }
+.st-row .rah-position { min-width: 0; min-height: 23px; padding: 3px 0; font-size: 11px; }
+.st-row .race-license, .st-row .race-rating { padding: 2px; text-align: center; font-size: 10px; }
+.rah-race .st-head { color: var(--rah-race-gold); font-size: 9px; text-transform: uppercase; }
+.st-head .st-number { background: none; color: inherit; text-shadow: none; }
+.st-group-title { margin-top: 6px; padding: 4px 6px; border-left: 4px solid var(--rah-class-color, var(--rah-race-rule)); background: var(--rah-race-raised); border-bottom: 1px solid var(--rah-class-color, var(--rah-race-rule)); font-size: 11px; font-weight: 700; }
+.st-row--player .st-name { color: var(--rah-race-gold); }
+#st-groups { overflow: auto; min-height: 28px; }
+.standings-container .st-footer { display: grid; gap: 2px; margin-top: 6px; padding-top: 6px; font-size: 10px; flex-shrink: 0; }
+.st-note { color: var(--rah-race-dim); }
+@media (max-width: 540px) {
+    .standings-container.rah-race .rah-card__header { margin-bottom: 4px; }
+    .rah-race .rah-row.st-row {
+        grid-template-columns: 24px 24px 30px minmax(0, 1fr) 50px 38px 24px;
+        grid-template-areas: 'pos cls num name lic ir gain' 'lap pit last last gap int int';
+        min-height: 32px; row-gap: 0; padding: 0; line-height: 14px;
+    }
+    .rah-race .rah-row.st-head { min-height: 26px; }
+    .st-group-title { margin-top: 4px; padding: 2px 6px; font-size: 10px; line-height: 14px; }
+    .st-row .st-number { padding: 2px 1px; }
+    .st-row .rah-position { min-height: 18px; padding: 1px 0; }
+    .st-row .st-last, .st-row .st-gap, .st-row .st-int { text-align: left; color: var(--rah-race-dim); font-size: 10px; }
+    .st-row .st-name { font-size: 11px; }
 }
 
-.rah-row.st-row > span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+/* ---- v2: user-selectable columns + polish -------------------------------- */
+.standings-container.rah-race {
+    --c-cls: 26px; --c-lap: 28px; --c-lic: 50px; --c-ir: 38px; --c-gain: 24px; --c-int: 55px;
 }
-
-.rah-row.st-head {
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    opacity: 0.7;
+html.rah-no-class_pos .standings-container { --c-cls: 0px; }
+html.rah-no-laps .standings-container { --c-lap: 0px; }
+html.rah-no-license .standings-container { --c-lic: 0px; }
+html.rah-no-irating .standings-container { --c-ir: 0px; }
+html.rah-no-gain .standings-container { --c-gain: 0px; }
+html.rah-no-interval .standings-container { --c-int: 0px; }
+html.rah-no-class_pos .st-class, html.rah-no-laps .st-lap, html.rah-no-license .race-license,
+html.rah-no-irating .race-rating, html.rah-no-gain .race-gain, html.rah-no-interval .st-int { visibility: hidden; overflow: hidden; padding: 0 !important; }
+@media (min-width: 541px) {
+    .rah-race .rah-row.st-row {
+        grid-template-columns: 30px var(--c-cls) 34px minmax(0, 1fr) var(--c-lap) var(--c-lic) var(--c-ir) var(--c-gain) 55px var(--c-int) 64px 22px;
+        column-gap: 3px;
+        min-height: 26px;
+    }
 }
-
-.rah-row.st-row--player {
-    font-weight: 700;
-    background: rgba(255, 255, 255, 0.10);
-    border-radius: 4px;
-}
-
+.st-number { border-radius: 3px; font-variant-numeric: tabular-nums; }
+.st-overall { padding-left: 4px; color: var(--rah-race-faint); }
+.st-name { font-size: 11.5px; }
 .st-group-title {
-    margin-top: 8px;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    opacity: 0.85;
+    margin-top: 8px; padding: 5px 8px; border-left-width: 3px; border-bottom: 0;
+    border-radius: 3px 3px 0 0; letter-spacing: .04em;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--rah-class-color, #888) 24%, transparent), transparent 75%);
 }
-
-.st-footer {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    margin-top: 10px;
-    padding-top: 8px;
-    border-top: 1px solid rgba(255, 255, 255, 0.10);
-    font-size: 11px;
-    opacity: 0.8;
-}
-
-.st-note {
-    font-size: 10px;
-    opacity: 0.75;
-}
+#st-groups > div:first-child .st-group-title { margin-top: 2px; }
+.rah-race .st-head { color: var(--rah-race-dim); font-weight: 700; letter-spacing: .08em; min-height: 22px; }
+.rah-race .st-head .race-license, .rah-race .st-head .race-rating { background: none !important; box-shadow: none; color: inherit; border: 0; font-weight: 700; }
+.st-pit { font-weight: 800; letter-spacing: .04em; }
