@@ -43,6 +43,13 @@ def serve_common_css(filename):
     common_css_folder = os.path.join(os.path.dirname(__file__), '..', 'common', 'css')
     return send_from_directory(common_css_folder, filename)
 
+@interface_bp.route('/common/fonts/<path:filename>')
+def serve_common_fonts(filename):
+    fonts_folder = os.path.join(os.path.dirname(__file__), '..', 'common', 'fonts')
+    response = send_from_directory(fonts_folder, filename)
+    response.headers['Cache-Control'] = 'public, max-age=604800'
+    return response
+
 @interface_bp.route('/get_overlays')
 def get_overlays():
     overlays_dir = os.path.join(os.path.dirname(__file__), '..', 'overlays')
@@ -80,9 +87,125 @@ def get_overlays():
                     'url': f"http://127.0.0.1:8085/overlay/{name}",
                     'position': position,
                     'dpi_info': dpi_info,
+                    'preview_images': {
+                        theme: f'/overlay/{name}/static/images/preview-{theme}.png'
+                        for theme in OVERLAY_THEMES
+                        if os.path.isfile(os.path.join(overlay_path, 'static', 'images',
+                                                       f'preview-{theme}.png'))
+                    },
                     'preview_gif': preview_gif
                 })
     return jsonify(overlays)
+
+# --------------------------------------------------------------------------
+# Per-overlay appearance settings
+#
+# Stored under the "settings" key of each overlay's properties.json, served to
+# the overlay page (desktop window and OBS browser source alike) by
+# /overlay_settings/<name>. Every value is validated and clamped here, so the
+# overlay runtime only ever receives a known, bounded shape.
+# --------------------------------------------------------------------------
+SETTINGS_DEFAULTS = {
+    'theme': '',          # '' follows the launcher's global theme
+    'opacity': 100,       # whole widget opacity, %
+    'bg_opacity': 100,    # panel background opacity, % of the theme's own alpha
+    'scale': 100,         # widget zoom, %
+    'accent': '#e2483d',  # header strip / highlight colour
+    'show_header': True,
+    'show_footer': True,
+    'hidden': [],         # overlay-specific parts switched off by the user
+}
+SETTINGS_LIMITS = {'opacity': (20, 100), 'bg_opacity': (0, 100), 'scale': (50, 200)}
+_OPTION_KEY_CHARS = set('abcdefghijklmnopqrstuvwxyz0123456789_')
+
+
+def _overlay_properties_path(folder_name):
+    if not isinstance(folder_name, str) or not folder_name or \
+            not set(folder_name) <= _OPTION_KEY_CHARS:
+        return None
+    path = os.path.join(os.path.dirname(__file__), '..', 'overlays', folder_name, 'properties.json')
+    return path if os.path.exists(path) else None
+
+
+def sanitize_settings(raw):
+    """Return a complete, validated settings dict from untrusted input."""
+    raw = raw if isinstance(raw, dict) else {}
+    clean = dict(SETTINGS_DEFAULTS)
+    clean['hidden'] = []
+    theme = raw.get('theme')
+    if theme in OVERLAY_THEMES:
+        clean['theme'] = theme
+    for key, (low, high) in SETTINGS_LIMITS.items():
+        value = raw.get(key)
+        if isinstance(value, (int, float)) and not isinstance(value, bool) and value == value:
+            clean[key] = int(max(low, min(high, round(value))))
+    accent = raw.get('accent')
+    if isinstance(accent, str) and len(accent) == 7 and accent[0] == '#' and \
+            all(c in '0123456789abcdefABCDEF' for c in accent[1:]):
+        clean['accent'] = accent.lower()
+    for key in ('show_header', 'show_footer'):
+        if isinstance(raw.get(key), bool):
+            clean[key] = raw[key]
+    hidden = raw.get('hidden')
+    if isinstance(hidden, list):
+        clean['hidden'] = sorted({h for h in hidden if isinstance(h, str) and 0 < len(h) <= 32
+                                  and set(h) <= _OPTION_KEY_CHARS})[:24]
+    return clean
+
+
+def read_overlay_settings(folder_name):
+    path = _overlay_properties_path(folder_name)
+    if not path:
+        return None
+    try:
+        with open(path, 'r') as handle:
+            return sanitize_settings(json.load(handle).get('settings'))
+    except (OSError, ValueError, AttributeError):
+        return sanitize_settings(None)
+
+
+def scaled_resolution(resolution, folder_name):
+    """Grow the native window with the user's zoom so nothing is clipped."""
+    settings = read_overlay_settings(folder_name) or SETTINGS_DEFAULTS
+    factor = settings.get('scale', 100) / 100.0
+    if factor == 1:
+        return resolution
+    return {'width': int(round(resolution['width'] * factor)),
+            'height': int(round(resolution['height'] * factor))}
+
+
+@interface_bp.route('/overlay_settings/<folder_name>', methods=['GET'])
+def get_overlay_settings(folder_name):
+    settings = read_overlay_settings(folder_name)
+    if settings is None:
+        return jsonify({'status': 'error', 'message': 'Overlay not found.'}), 404
+    payload = dict(settings)
+    # Read-only native size so the launcher can frame its live preview.
+    try:
+        with open(_overlay_properties_path(folder_name), 'r') as handle:
+            resolution = json.load(handle).get('resolution') or {}
+        payload['resolution'] = {'width': int(resolution.get('width', 800)),
+                                 'height': int(resolution.get('height', 600))}
+    except (OSError, ValueError, TypeError, AttributeError):
+        payload['resolution'] = {'width': 800, 'height': 600}
+    response = jsonify(payload)
+    response.headers['Cache-Control'] = 'no-store'
+    return response
+
+
+@interface_bp.route('/overlay_settings/<folder_name>', methods=['POST'])
+def save_overlay_settings(folder_name):
+    path = _overlay_properties_path(folder_name)
+    if not path:
+        return jsonify({'status': 'error', 'message': 'Overlay not found.'}), 404
+    settings = sanitize_settings(request.get_json(silent=True))
+    with open(path, 'r') as handle:
+        properties = json.load(handle)
+    properties['settings'] = settings
+    with open(path, 'w') as handle:
+        json.dump(properties, handle, indent=4)
+    return jsonify({'status': 'success', 'settings': settings}), 200
+
 
 def validated_theme(value):
     """Return the theme only when it is whitelisted, else None."""
@@ -141,7 +264,7 @@ def launch_overlay():
         
         process = multiprocessing.Process(
             target=launch_overlay_window, 
-            args=(overlay_url, resolution, exit_flag, is_transparent, position, folder_name)
+            args=(overlay_url, scaled_resolution(resolution, folder_name), exit_flag, is_transparent, position, folder_name)
         )
         process.daemon = True  
         process.start()
@@ -271,7 +394,7 @@ def launch_overlay_with_transparency(folder_name, is_transparent):
     
     process = multiprocessing.Process(
         target=launch_overlay_window, 
-        args=(overlay_url, resolution, exit_flag, is_transparent, position, folder_name)
+        args=(overlay_url, scaled_resolution(resolution, folder_name), exit_flag, is_transparent, position, folder_name)
     )
     process.daemon = True
     process.start()

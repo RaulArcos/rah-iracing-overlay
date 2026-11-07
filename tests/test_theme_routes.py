@@ -38,6 +38,7 @@ OVERLAYS = [
     'pit_assistant',
     'weather',
     'broadcast_driver',
+    'delta',
 ]
 
 
@@ -171,7 +172,7 @@ class TestLauncherSelector(ThemeRouteTestBase):
         overlays = response.get_json()
         expected_keys = {
             'display_name', 'folder_name', 'description', 'url',
-            'position', 'dpi_info', 'preview_gif',
+            'position', 'dpi_info', 'preview_gif', 'preview_images',
         }
         self.assertEqual({o['folder_name'] for o in overlays}, set(OVERLAYS))
         for overlay in overlays:

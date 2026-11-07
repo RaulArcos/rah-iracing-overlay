@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, send_from_directory, Response
+from flask import Blueprint, render_template, send_from_directory, Response, request
 import os
 import sys
 
@@ -23,6 +23,17 @@ def serve_overlay(overlay_name):
     if os.path.exists(html_file_path):
         # Render the template with transparency support
         rendered_html = render_template(f'{overlay_name}/{overlay_name}.html')
+        # Per-overlay appearance settings (opacity, zoom, accent, parts shown).
+        # Identical for every request; values are fetched client-side.
+        rendered_html = rendered_html.replace(
+            '</head>', '<script src="/common/js/overlay_settings.js"></script>\n</head>', 1)
+        # Only an unambiguous explicit opt-in loads the browser-local feed.
+        # All templates register their consumers on DOMContentLoaded; these
+        # trusted scripts run after Socket.IO is defined and before that event.
+        if request.args.getlist('demo') == ['1']:
+            scripts = ''.join(f'<script src="/common/js/{name}.js"></script>'
+                              for name in ('demo_race', 'demo_scenario', 'demo_adapter'))
+            rendered_html = rendered_html.replace('</head>', scripts + '\n</head>', 1)
         
         # Return with appropriate headers
         response = Response(rendered_html)

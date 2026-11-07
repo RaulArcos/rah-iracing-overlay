@@ -4,65 +4,172 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RAH iRacing Overlay</title>
+    <link rel="stylesheet" href="{{ url_for('interface.serve_common_css', filename='rah-fonts.css') }}">
     <link rel="stylesheet" href="{{ url_for('interface.serve_static', filename='style.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="{{ url_for('serve_common_js', filename='overlay_theme.js') }}"></script>
+    <script src="{{ url_for('interface.serve_static', filename='previews.js') }}" defer></script>
     <script src="{{ url_for('interface.serve_static', filename='main.js') }}" defer></script>
-    
 </head>
 <body>
-    <div class="app-container">
-        <header class="app-header">
-            <h1>RAH iRacing Overlay</h1>
-            <div class="theme-selector">
-                <label for="themeSelect">Theme</label>
-                <select id="themeSelect">
-                    <option value="original" selected>Original RAH</option>
-                    <option value="glass">Glass</option>
-                </select>
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></symbol>
+        <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2" fill="currentColor"/></symbol>
+        <symbol id="i-move" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+        <symbol id="i-globe" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z"/></g></symbol>
+        <symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/></g></symbol>
+        <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v4h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3"/></g></symbol>
+    </svg>
+
+    <div class="app">
+        <div id="saveProgress" class="save-progress" aria-hidden="true"></div>
+        <header class="topbar">
+            <div class="brand">
+                <span class="brand__mark">RAH</span>
+                <span class="brand__name">Overlay Studio</span>
+                <h1 class="visually-hidden">RAH iRacing Overlay</h1>
+            </div>
+            <div class="topbar__meta">
+                <span id="clock" class="clock">--:--:--</span>
+                <span id="activeCount" class="live-pill" title="Overlays running">
+                    <span class="live-pill__dot"></span><span class="live-pill__text">Idle</span>
+                </span>
+                <div class="theme-selector">
+                    <label for="themeSelect">Theme</label>
+                    <select id="themeSelect">
+                        <option value="original" selected>Original RAH</option>
+                        <option value="glass">Glass</option>
+                    </select>
+                </div>
             </div>
         </header>
-        <main class="app-main">
-            <div class="content-container">
-                <div class="overlay-list-container">
-                    <div id="overlayList"></div>
+
+        <div class="layout">
+            <aside class="sidebar glass reveal" aria-label="Overlays">
+                <div class="section-label"><span>01 — Overlays</span><i></i><span id="overlayCount" class="section-label__aux">--</span></div>
+                <label class="search">
+                    <svg aria-hidden="true"><use href="#i-search"/></svg>
+                    <input id="overlaySearch" type="search" placeholder="Search overlays" aria-label="Search overlays" autocomplete="off">
+                </label>
+                <div id="overlayList" class="overlay-list" role="list"></div>
+            </aside>
+
+            <main class="detail glass reveal" id="detail" style="--d: 80ms">
+                <div class="preview-placeholder">
+                    <p>Select an overlay to see its preview</p>
                 </div>
-                <div class="overlay-preview-container">
-                    <div id="previewContent">
-                        <div class="preview-placeholder">
-                            <p>Select an overlay to see its preview</p>
+                <div class="preview-content" hidden>
+                    <section class="detail__head">
+                        <div class="detail__title">
+                            <span id="detailKicker" class="kicker">Overlay --/--</span>
+                            <h2 id="previewTitle">Overlay</h2>
+                            <p id="previewDescription" class="preview-description"></p>
                         </div>
-                        <div class="preview-content" style="display: none;">
-                            <h3 id="previewTitle">Overlay Name</h3>
-                            <div class="preview-description" id="previewDescription">Description will appear here.</div>
-                            <div class="preview-image">
-                                <img id="previewGif" src="" alt="Overlay Preview">
+                        <div class="detail__actions">
+                            <button id="actionToggle" class="btn btn--primary" type="button">
+                                <svg aria-hidden="true"><use href="#i-play"/></svg><span>Launch</span>
+                            </button>
+                            <button id="actionPosition" class="btn" type="button" title="Open a movable window to place the overlay on screen">
+                                <svg aria-hidden="true"><use href="#i-move"/></svg><span>Position</span>
+                            </button>
+                            <button id="actionBrowser" class="btn btn--icon" type="button" title="Open in browser" aria-label="Open in browser">
+                                <svg aria-hidden="true"><use href="#i-globe"/></svg>
+                            </button>
+                        </div>
+                    </section>
+
+                    <div class="detail__body">
+                        <section class="stage" aria-label="Live preview">
+                            <div class="stage__bar">
+                                <span class="stage__label"><span class="dot"></span>02 — Live preview</span>
+                                <span class="preview-caption">Simulated telemetry — not live iRacing data</span>
                             </div>
-                        </div>
+                            <div class="stage__canvas" id="stageCanvas">
+                                <span class="bracket bracket--tl"></span><span class="bracket bracket--tr"></span>
+                                <span class="bracket bracket--bl"></span><span class="bracket bracket--br"></span>
+                                <span class="scanline" aria-hidden="true"></span>
+                                <div class="stage__frame" id="stageFrame">
+                                    <iframe id="previewFrame" title="Overlay preview" tabindex="-1"></iframe>
+                                </div>
+                                <img id="previewGif" alt="" hidden>
+                            </div>
+                            <div class="stage__foot">
+                                <span id="stageSize" class="muted">—</span>
+                                <a id="previewDemo" target="_blank" rel="noopener">Open full demo</a>
+                            </div>
+                        </section>
+
+                        <section class="settings" aria-label="Overlay settings">
+                            <div class="settings__head">
+                                <h3>03 — Appearance</h3>
+                                <span id="saveState" class="save-state" aria-live="polite"></span>
+                            </div>
+
+                            <div class="field">
+                                <span class="field__label">Theme</span>
+                                <div class="segmented" role="radiogroup" aria-label="Overlay theme" id="themeSegment">
+                                    <button type="button" role="radio" data-value="">Default</button>
+                                    <button type="button" role="radio" data-value="original">Original</button>
+                                    <button type="button" role="radio" data-value="glass">Glass</button>
+                                </div>
+                            </div>
+
+                            <div class="field">
+                                <label class="field__label" for="setOpacity">Overall opacity</label>
+                                <div class="range"><input id="setOpacity" type="range" min="20" max="100" step="1"><output for="setOpacity" id="outOpacity">100%</output></div>
+                            </div>
+                            <div class="field">
+                                <label class="field__label" for="setBg">Background opacity</label>
+                                <div class="range"><input id="setBg" type="range" min="0" max="100" step="1"><output for="setBg" id="outBg">100%</output></div>
+                            </div>
+                            <div class="field">
+                                <label class="field__label" for="setScale">Size</label>
+                                <div class="range"><input id="setScale" type="range" min="50" max="200" step="5"><output for="setScale" id="outScale">100%</output></div>
+                            </div>
+
+                            <div class="field">
+                                <span class="field__label">Accent colour</span>
+                                <div class="swatches" id="accentSwatches">
+                                    <input id="setAccent" type="color" aria-label="Custom accent colour" title="Custom colour">
+                                </div>
+                            </div>
+
+                            <div class="field field--switches">
+                                <label class="switch"><input id="setHeader" type="checkbox"><span class="switch__track"></span><span>Title bar</span></label>
+                                <label class="switch"><input id="setFooter" type="checkbox"><span class="switch__track"></span><span>Footer notes</span></label>
+                            </div>
+
+                            <div class="field" id="partsField" hidden>
+                                <span class="field__label">Show</span>
+                                <div class="chips" id="partsList"></div>
+                            </div>
+
+                            <div class="settings__group">
+                                <h3>04 — OBS browser source</h3>
+                                <div class="obs">
+                                    <input id="obsUrl" type="text" readonly aria-label="OBS browser source URL">
+                                    <button id="copyObs" class="btn btn--icon" type="button" title="Copy URL" aria-label="Copy URL"><svg aria-hidden="true"><use href="#i-copy"/></svg></button>
+                                </div>
+                                <p class="hint" id="obsHint">Width — · Height —</p>
+                            </div>
+
+                            <button id="resetSettings" class="btn btn--ghost" type="button"><svg aria-hidden="true"><use href="#i-reset"/></svg><span>Reset</span></button>
+                        </section>
                     </div>
                 </div>
-            </div>
-        </main>
+            </main>
+        </div>
+
         <footer class="app-footer">
-            <div class="social-icons">
-                <a href="https://github.com/RaulArcos" target="_blank">
-                    <img src="/images/github_logo.png" alt="GitHub">
-                    <span>RaulArcos</span>
-                </a>
-                <a href="https://www.linkedin.com/in/ra%C3%BAl-arcos-herrera-b11514175/" target="_blank">
-                    <img src="/images/linkedin_logo.png" alt="LinkedIn">
-                    <span>Raul Arcos Herrera</span>
-                </a>
-                <a href="https://www.paypal.me/raularcosherrera" target="_blank">
-                    <img src="/images/paypal_logo.png" alt="PayPal">
-                    <span>Coffee?</span>
-                </a>
-                <a href="https://www.twitch.tv/dizca" target="_blank">
-                    <img src="/images/twitch_logo.png" alt="Twitch">
-                    <span>Dizca</span>
-                </a>
-            </div>
+            <nav class="social-icons" aria-label="Links">
+                <a href="https://github.com/RaulArcos" target="_blank" rel="noopener">GitHub</a>
+                <a href="https://www.linkedin.com/in/ra%C3%BAl-arcos-herrera-b11514175/" target="_blank" rel="noopener">LinkedIn</a>
+                <a href="https://www.twitch.tv/dizca" target="_blank" rel="noopener">Twitch</a>
+                <a href="https://raularcos.github.io/" target="_blank" rel="noopener">Web</a>
+                <a href="https://www.paypal.me/raularcosherrera" target="_blank" rel="noopener" class="social-icons__cta">Buy me a coffee</a>
+            </nav>
         </footer>
     </div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </body>
 </html>
