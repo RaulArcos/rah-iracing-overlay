@@ -256,13 +256,13 @@ class TestRelativeGaps(unittest.TestCase):
             self.assertIs(car['gap_is_estimate'], True)
 
     def test_ahead_and_behind_sign_semantics(self):
-        result = make_provider(base_sample()).get_telemetry_data()
+        result = make_provider(self.profile_sample()).get_telemetry_data()
         # Car 2 is 0.05 lap ahead of the player, car 3 is 0.40 lap behind.
         self.assertAlmostEqual(relative_car(result, 2)['gap'], 0.05 * 85.0, places=3)
         self.assertAlmostEqual(relative_car(result, 3)['gap'], -0.40 * 85.0, places=3)
 
     def test_wraps_lapped_cars_correctly(self):
-        data = base_sample(
+        data = self.profile_sample(
             CarIdxLapDistPct=[-1.0, 0.50, 0.55, 0.10],
             CarIdxLapCompleted=[0, 2, 4, 1],
         )
@@ -272,15 +272,25 @@ class TestRelativeGaps(unittest.TestCase):
         self.assertAlmostEqual(car2['gap'], 0.05 * 85.0, places=3)
         self.assertEqual(car2['lap_delta'], 2)
 
-        data = base_sample(
+        data = self.profile_sample(
             CarIdxLapDistPct=[-1.0, 0.90, 0.10, 0.10],
             CarIdxLapCompleted=[0, 3, 1, 1],
+            CarIdxEstTime=[-1, 76.5, 8.5, 8.5],
         )
         result = make_provider(data).get_telemetry_data()
         car2 = relative_car(result, 2)
         # Raw delta -2.80 laps must wrap to +0.20 lap (ahead on track).
         self.assertAlmostEqual(car2['gap'], 0.20 * 85.0, places=3)
         self.assertEqual(car2['lap_delta'], -2)
+
+    @staticmethod
+    def profile_sample(**overrides):
+        sample = base_sample()
+        for driver in sample['DriverInfo']['Drivers']:
+            driver.update(CarClassID=0, CarClassEstLapTime=85)
+        sample['CarIdxEstTime'] = [-1, 42.5, 46.75, 8.5]
+        sample.update(overrides)
+        return sample
 
     def test_rejects_invalid_cars(self):
         data = base_sample(
@@ -337,8 +347,9 @@ class TestNonfiniteHandling(unittest.TestCase):
         )
         result = make_provider(data).get_telemetry_data()
         self.assertEqual(result['speed'], 0.0)
-        # Relative gaps fall back to a sane base lap time instead of inf/nan.
-        self.assertAlmostEqual(relative_car(result, 3)['gap'], -0.40 * 90.0, places=3)
+        # Missing SDK profile timing stays null; physical proximity is preserved.
+        self.assertIsNone(relative_car(result, 3)['gap'])
+        self.assertAlmostEqual(relative_car(result, 3)['track_delta_pct'], -.4, places=7)
         json.dumps(result, allow_nan=False)
 
     def test_payload_of_frozen_sample_is_strict_json(self):

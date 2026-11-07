@@ -94,6 +94,11 @@ class TestPayloadContract(unittest.TestCase):
         without = make_provider(stripped).get_telemetry_data()
         for key in ('pit_assistant_data', 'weather_data'):
             del with_vars[key], without[key]
+        # R2 intentionally also exposes TrackTempCrew in these additive
+        # summaries. Pin that one new leaf, then compare every other value.
+        for key in ('relative_data', 'standings_data'):
+            self.assertEqual(with_vars[key]['session_summary'].pop('track_temp_c'), 33.5)
+            self.assertIsNone(without[key]['session_summary'].pop('track_temp_c'))
         self.assertEqual(with_vars, without)
 
     def test_overflowing_values_never_leave_a_non_finite_number_in_either_payload(self):

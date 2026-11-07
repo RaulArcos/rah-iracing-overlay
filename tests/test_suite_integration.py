@@ -1,6 +1,6 @@
 """Suite integration tests (T7, S1-S5).
 
-Drives all 13 overlays through the public surface only: the HTTP discovery and
+Drives all 14 overlays through the public surface only: the HTTP discovery and
 asset routes, the Socket.IO namespaces/events (flask-socketio test client, the
 telemetry thread stubbed) and one frozen FakeSDK tick built from the existing
 per-unit fixtures. No simulator, server, or browser is started.
@@ -52,6 +52,7 @@ EVENTS = {
     'pit_assistant': 'pit_assistant_update',
     'weather': 'weather_update',
     'broadcast_driver': 'broadcast_driver_update',
+    'delta': 'delta_update',
 }
 # Namespaces that predate the suite declare on_disconnect(self), which fails
 # on the reason argument newer flask-socketio passes; leave them connected.
@@ -137,9 +138,9 @@ class WireTestBase(unittest.TestCase):
 class TestDiscoveryAndRouting(WireTestBase):
     def test_all_thirteen_overlays_are_discovered_with_unique_names_and_plain_urls(self):
         overlays = self.web.app.test_client().get('/get_overlays').get_json()
-        self.assertEqual(len(overlays), 13)
+        self.assertEqual(len(overlays), 14)
         self.assertEqual({o['folder_name'] for o in overlays}, set(OVERLAYS))
-        self.assertEqual(len({o['display_name'] for o in overlays}), 13)
+        self.assertEqual(len({o['display_name'] for o in overlays}), 14)
         for overlay in overlays:
             self.assertTrue(overlay['display_name'] and overlay['description'])
             self.assertTrue(overlay['url'].endswith(f"/overlay/{overlay['folder_name']}"))
@@ -290,7 +291,7 @@ class TestNoSimulatorDefaults(WireTestBase):
 
     def test_losing_the_sim_stops_the_stream_instead_of_replaying_the_last_frame(self):
         use_sdk(self.web, suite_sample())
-        self.assertEqual(len(payloads(self.tick())), 13)
+        self.assertEqual(len(payloads(self.tick())), 14)
         self.provider.disconnect()
         self.assertEqual(self.provider.get_telemetry_data(), {})
         self.assertEqual({name: events for name, events in self.tick().items() if events}, {})
