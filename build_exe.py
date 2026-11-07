@@ -94,8 +94,8 @@ def run_tests():
 
 def ensure_app_closed():
     result = subprocess.run(['tasklist', '/FI', f'IMAGENAME eq {APP_NAME}.exe', '/NH'],
-                            capture_output=True, text=True)
-    if f'{APP_NAME}.exe' in result.stdout:
+                            capture_output=True)
+    if f'{APP_NAME}.exe'.encode('ascii') in result.stdout:
         fail(f"{APP_NAME}.exe is running. Close it and run the build again.")
 
 
