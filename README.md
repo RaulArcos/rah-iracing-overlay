@@ -7,7 +7,7 @@ I just didn't want to pay for overlay subscriptions to get the overlays I actual
 <p align="center">
   <a href="https://github.com/RaulArcos/rah-iracing-overlay/releases/download/v0.3.0/rah-overlays-promo.mp4"><img src="images/promo.webp" alt="Delta, Relative, Input Telemetry and Radar running live" width="100%"></a>
   <br>
-  <sub><a href="https://github.com/RaulArcos/rah-iracing-overlay/releases/download/v0.3.0/rah-overlays-promo.mp4">Watch the full video (1080p)</a> · <a href="https://raularcos.github.io/overlays/">Try every overlay live in your browser</a></sub>
+  <sub><a href="https://raularcos.github.io/overlays/">Try every overlay live in your browser</a></sub>
 </p>
 
 ## **Table of Contents**
