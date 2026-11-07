@@ -1,5 +1,31 @@
 # Overlay themes: Original RAH and Glass
 
+## Broadcast redesign (R1)
+
+Migrated widgets load `/common/css/race-system.css` **after** the original theme
+stylesheet and opt in with `.rah-race.rah-card`. This deliberately redesigns
+Original as well as Glass; widgets without that class retain the earlier styling.
+All 13 widgets are migrated. Relative and Standings use class strips and rating
+badges; Laptime Log combines an observed graph and table; Head to Head compares
+recent observed laps; Radar and BlindSpot use labelled proximity warnings.
+
+R3 adds Laptime Log (`laptime_graph`) and Head to Head (`battle_pace`) to the
+opt-in membership in both skins; see `docs/laplog-headtohead-design.md` for
+their observation contracts and browser evidence.
+
+`DESIGN.md` defines the palette and geometry. Reusable primitives include the
+red-strip `.rah-card__header`, divided `.rah-metric` cells, `.rah-position`,
+`.rah-class-mark`, `.rah-badge`, striped `.rah-table-row`, highlighted
+`.rah-player`, `.rah-footer`, and semantic timing classes `.rah-best`,
+`.rah-improved`, `.rah-slower`, `.rah-muted`. These preserve field IDs and event
+contracts; skins change material and radius, not data or layout.
+
+R1 screenshots use simulated fixtures, not live iRacing telemetry. Native widget
+sizes plus 375/768/1280px browser widths are exercised by the local browser probe.
+
+The completed redesign, packaged smoke checks and remaining manual checks are
+recorded in [visual-redesign-validation.md](visual-redesign-validation.md).
+
 This document describes the dual-theme system shared by every overlay
 (ODD task T2, specs S2–S5): how a theme is selected, how the launcher
 persists the choice, how browser/OBS URLs override it, and the exact
@@ -125,3 +151,33 @@ stable columns while telemetry updates).
 
 New widgets gain the Glass look automatically by using these classes; do not
 add unscoped rules that restyle existing overlay classes.
+
+## Per-overlay settings (v2)
+
+Each overlay has its own appearance settings, edited from the launcher's
+**Appearance** panel with a live preview and saved (debounced) to the
+`settings` key of that overlay's `properties.json`:
+
+| Key | Range | Effect |
+|---|---|---|
+| `theme` | `''` / `original` / `glass` | `''` follows the launcher's default theme |
+| `opacity` | 20–100 | whole widget opacity |
+| `bg_opacity` | 0–100 | multiplies every panel surface alpha (`--rah-bg-alpha`) |
+| `scale` | 50–200 | `body { zoom }`; the desktop window grows to match on launch |
+| `accent` | `#rrggbb` | header rule colour (`--rah-accent`) |
+| `show_header`, `show_footer` | bool | hide the title band / explanatory footer |
+| `hidden` | list of keys | overlay parts switched off, as `html.rah-no-<key>` |
+
+`GET/POST /overlay_settings/<name>` validates and clamps everything
+(`sanitize_settings`). The runtime `/common/js/overlay_settings.js` is injected
+into every overlay page; it fetches the settings, polls every 2 s (so an open
+window or OBS source updates without reloading), and accepts OBS URL overrides:
+
+```
+?opacity=80&bg=60&scale=120&accent=ff6600&header=0&footer=0&hide=wheel,clutch
+```
+
+Precedence: defaults → saved settings → URL overrides. In the launcher preview
+(`?demo=1&embed=1`) the page instead listens for same-origin
+`postMessage({type:'rah-settings', settings})`. Changing `scale` or `theme` of a
+running overlay relaunches its window automatically.

@@ -1,25 +1,104 @@
 # **RAH iRacing Overlay**
 
-**iRacing Input Telemetry Overlay** is an open-source Python-based project that provides real-time telemetry from iRacing, displaying input data both through a web interface so you can put it on programs like OBS or screen overlay for using it on your game.
+**RAH iRacing Overlay** is a free, open-source suite of real-time iRacing overlays written in Python. Every overlay runs as a transparent window on top of the game, or as a web page you can add to OBS as a browser source.
 
-I just didn't wanted to pay for some overlays subcriptions to have the overlay that I actually wanted, so why not trying? I hope you feel the same, this is free of course ;)
+I just didn't want to pay for overlay subscriptions to get the overlays I actually wanted, so why not try? I hope you feel the same. This is free, of course ;)
 
 <p align="center">
-  <img src=https://github.com/RaulArcos/rah-iracing-overlay/blob/development/images/input-telemetry.gif>
-  <img src=https://github.com/RaulArcos/rah-iracing-overlay/blob/development/images/interface.png  width="600">
+  <a href="https://github.com/RaulArcos/rah-iracing-overlay/releases/download/v0.3.0/rah-overlays-promo.mp4"><img src="images/promo.webp" alt="Delta, Relative, Input Telemetry and Radar running live" width="100%"></a>
+  <br>
+  <sub><a href="https://github.com/RaulArcos/rah-iracing-overlay/releases/download/v0.3.0/rah-overlays-promo.mp4">Watch the full video (1080p)</a> · <a href="https://raularcos.github.io/overlays/">Try every overlay live in your browser</a></sub>
 </p>
 
 ## **Table of Contents**
 
-- [Compilation](#compilation)
+- [Download](#download)
 - [Usage](#usage)
 - [Available overlays](#available-overlays)
+- [Compilation](#compilation)
 - [Contributing](#contributing)
 - [License](#license)
 
+## **Download**
+
+1. Download the latest `RAH_Telemetry_Overlay-*.zip` from the [Releases page](https://github.com/RaulArcos/rah-iracing-overlay/releases).
+2. Extract the whole folder. Keep `RAH_Telemetry_Overlay.exe` next to its `_internal` folder; the executable does not work on its own.
+3. Run `RAH_Telemetry_Overlay.exe`.
+
+If Windows blocks the app after downloading, see [Windows Security](#windows-security-dll-blocking-after-download-mark-of-the-web).
+
+## **Usage**
+
+Open the `.exe` like any other Windows program. The launcher lets you open any overlay, move it, choose a theme and copy its web link for OBS.
+
+<p align="center">
+  <img src="images/interface-original.png" alt="Launcher with the Delta overlay selected, Original style" width="49%">
+  <img src="images/interface-glass.png" alt="Launcher with the Relative overlay selected, Glass style" width="49%">
+</p>
+
+- **Themes:** choose **Original RAH** (solid dark/red) or **Glass** (translucent, rounded) in the launcher. Both show the same data and layout.
+- **Appearance:** per-overlay opacity, background opacity, size, accent colour and title bar / footer toggles.
+- **Previews and demo mode:** select an overlay to see a populated preview image. Click **Preview Demo** to watch it with animated fictional telemetry, without iRacing. The demo is clearly labelled as simulated and has **Pause / Resume**.
+- **Real data:** overlays only show real values while iRacing is running. Without the simulator they stay in an empty state ("Waiting for data", "No data" or "--").
+
+Every overlay is also available in a browser or OBS browser source:
+
+| URL | Result |
+|-----|--------|
+| `http://127.0.0.1:8085/overlay/<name>` | Original RAH style (default) |
+| `http://127.0.0.1:8085/overlay/<name>?theme=glass` | Glass style |
+| `http://127.0.0.1:8085/overlay/<name>?demo=1` | Simulated demo data, never live |
+
+`<name>` is the folder name from the [Available overlays](#available-overlays) table, for example `fuel_finish`. Theme details: [docs/overlay-themes.md](docs/overlay-themes.md). Preview and demo details: [docs/menu-previews.md](docs/menu-previews.md).
+
+### Windows Security: DLL blocking after download (Mark-of-the-Web)
+
+Some Windows downloads add a security mark (`Zone.Identifier`) to extracted binaries. This may block runtime DLL loading (`Python.Runtime.dll`, WebView DLLs).
+
+Current releases include a startup safeguard that removes this mark from bundled runtime binaries before the telemetry stack initializes. If you still hit this issue, run this once inside the extracted release folder:
+
+```powershell
+Get-ChildItem -Recurse -File | Unblock-File
+```
+
+For maintainers: the robust long-term solution for public releases is code signing (Authenticode/Trusted Signing).
+
+## **Available overlays**
+
+All 14 overlays in both styles, running on a simulated race. Original is the default; Glass is translucent and works best over the game.
+
+<p align="center">
+  <img src="images/overlays-original.jpg" alt="All overlays in the Original style">
+</p>
+
+<p align="center">
+  <img src="images/overlays-glass.jpg" alt="All overlays in the Glass style">
+</p>
+
+Every overlay is discovered automatically by the launcher and can be opened as `http://127.0.0.1:8085/overlay/<name>`.
+
+| Overlay | Folder / route name | Purpose |
+|---------|---------------------|---------|
+| Input Telemetry | `input_telemetry` | Throttle, brake, clutch, steering and gear |
+| Relative | `relative` | Nearby cars with SDK track-time gaps, license/iRating badges and class colours ([details](docs/relative-standings-design.md)) |
+| Radar | `radar` | Nearby cars moving ahead/behind you, distance bars and left/right spotter warnings ([details](docs/radar-traffic-visual.md)) |
+| BlindSpot | `blindspot` | Left/right blindspot warnings |
+| Track Map | `track_map` | Cars on a lap-progress ring |
+| Laptime Graph | `laptime_graph` | Lap-time graph and table with best lap, track temperature and incident laps ([details](docs/laplog-headtohead-design.md)) |
+| Delta | `delta` | Running lap time, live delta to your best lap and sector colours |
+| Fuel & Finish | `fuel_finish` | Fuel, observed burn per clean lap, advisory finish estimate ([details](docs/fuel-session.md)) |
+| Session Strip | `session_strip` | Session type, laps/time remaining, state, flag and position ([details](docs/fuel-session.md)) |
+| Battle & Pace | `battle_pace` | Same-class car ahead/behind, race gap and recent-lap comparison ([details](docs/battle-standings.md)) |
+| Multiclass Standings | `standings` | Class groups with SoF, ratings, laps, last lap, pit flag and race gaps ([details](docs/battle-standings.md)) |
+| Pit Assistant | `pit_assistant` | Read-only pit status, pit speed limit margin, repair/tow timers and requested service ([details](docs/pit-weather.md)) |
+| Weather | `weather` | Observed air/track temperature, humidity, wind, precipitation and track wetness; not a forecast ([details](docs/pit-weather.md)) |
+| Broadcast Driver Card | `broadcast_driver` | Lower-third card for the driver the broadcast camera follows ([details](docs/broadcast-driver.md)) |
+
+Known data limits: in AI sessions iRacing does not provide your real license/iRating, so it is shown as unavailable; positions gained stay `--` because the SDK does not expose a confirmed starting grid; Radar shows longitudinal distance only, since iRacing does not provide each car's lateral position.
+
 ## **Compilation**
 
-You can compile your own modified version, or make use of the precompiled one you can find on releases of this repo.
+You can compile your own modified version, or use the precompiled one from the [Releases page](https://github.com/RaulArcos/rah-iracing-overlay/releases).
 
 ### **Prerequisites**
 
@@ -43,93 +122,40 @@ Or double-click `build.bat`. It:
 
 Options: `build.bat --skip-tests`, `build.bat --no-zip` (same flags for `python build_exe.py`). Close the overlay app before rebuilding.
 
-## **Usage**
-
-Just open the .exe file like a normal windows program, you will be welcomed by an easy interace to open any of the overlays, as well as modify its position or opening it on their web version to get the link for OBS.
-
-<p align="center">
-  <img src=https://github.com/RaulArcos/rah-iracing-overlay/blob/development/images/interface_with_movement.png  width="600">
-</p>
-
-### **Development preview (from source)**
-
-To try the overlays, including the newer ones, without compiling:
+### **Run from source**
 
 ```bash
 pip install -r requirements.txt
 python src/app.py
 ```
 
-This opens the launcher window and serves the overlays at `http://127.0.0.1:8085/`. Any overlay can also be used in a browser or an OBS browser source:
+This opens the launcher and serves the overlays at `http://127.0.0.1:8085/`. There is no hot reload: restart after changing Python code, and refresh the overlay page after changing HTML, CSS or JS. A compiled `.exe` only contains what was built into it.
 
-| URL | Result |
-|-----|--------|
-| `http://127.0.0.1:8085/overlay/<name>` | Original RAH style (default) |
-| `http://127.0.0.1:8085/overlay/<name>?theme=glass` | Glass style |
+Tests: `python -m unittest discover -s tests` and `node --test tests/test_*.cjs`. Validation commands and the manual iRacing / OBS checklist are in [docs/race-suite-validation.md](docs/race-suite-validation.md).
 
-`<name>` is the folder name from the [Available overlays](#available-overlays) table, for example `fuel_finish`. The launcher has a theme selector that pins the chosen theme in the URL it opens; details in [docs/overlay-themes.md](docs/overlay-themes.md).
+### **Website demos**
 
-A few things to know:
-
-- There is no hot reload. After changing Python code, restart `python src/app.py`; after changing HTML, CSS or JS, refresh the overlay page.
-- A precompiled `.exe` only contains what was built into it. It does not include source changes until you rebuild it (see [Compilation](#compilation)).
-- Overlays only show real values while iRacing is running. Without the simulator they stay in an empty state ("Waiting for data", "No data" or "--").
-- Validation commands and the manual iRacing / OBS checklist are in [docs/race-suite-validation.md](docs/race-suite-validation.md).
-
-## Windows Security: DLL blocking after download (Mark-of-the-Web)
-
-Some Windows downloads add a security mark (`Zone.Identifier`) to extracted binaries. This may block runtime DLL loading (`Python.Runtime.dll`, WebView DLLs).
-
-Current releases include a startup safeguard that removes this mark from bundled runtime binaries before the telemetry stack initializes.
-
-If a user still hits this issue, run this once inside the extracted release folder:
-
-```powershell
-Get-ChildItem -Recurse -File | Unblock-File
-```
-
-For maintainers: the robust long-term solution for public releases is code signing (Authenticode/Trusted Signing).
-
-## **Available overlays**
-
-Every overlay is discovered automatically by the launcher and can be opened as `http://127.0.0.1:8085/overlay/<name>` (add `?theme=glass` for the Glass style; Original is the default).
-
-| Overlay | Folder / route name | Purpose |
-|---------|---------------------|---------|
-| Input Telemetry | `input_telemetry` | Throttle, brake, clutch, steering and gear |
-| Relative | `relative` | Nearby cars and estimated gaps |
-| Radar | `radar` | Close-proximity car alerts |
-| BlindSpot | `blindspot` | Left/right blindspot warnings |
-| Track Map | `track_map` | Cars on a lap-progress ring |
-| Laptime graph | `laptime_graph` | Lap-time trend, best/last/delta |
-| Fuel & Finish | `fuel_finish` | Fuel, observed burn per clean lap, advisory finish estimate ([details](docs/fuel-session.md)) |
-| Session Strip | `session_strip` | Session type, laps/time remaining, state, flag and position ([details](docs/fuel-session.md)) |
-| Battle & Pace | `battle_pace` | Same-class car ahead/behind, race gap, last/best lap comparison and observed lap trend ([details](docs/battle-standings.md)) |
-| Multiclass Standings | `standings` | Overall and class rank per class group with laps, best/last lap, pit flag and race gaps ([details](docs/battle-standings.md)) |
-| Pit Assistant | `pit_assistant` | Read-only pit status, pit speed limit margin when the track reports one, repair/tow timers and requested service ([details](docs/pit-weather.md)) |
-| Weather | `weather` | Observed air/track temperature, humidity, wind, precipitation and track wetness; not a forecast ([details](docs/pit-weather.md)) |
-| Broadcast Driver Card | `broadcast_driver` | Lower-third card for the driver the broadcast camera follows: name, number, class, position, laps, last/best lap and pit status; never your own inputs ([details](docs/broadcast-driver.md)) |
+`python scripts/build_web_demo.py <output-dir>` exports every overlay's demo as static files (`<output-dir>/demo/`) with relative URLs, ready for a static host. The overlays page at <https://raularcos.github.io/overlays/> is built from this: run it with the website repo's `overlays/` folder as the output, then commit there.
 
 ## **Contributing**
 
-I hope you want to take part on this journey! Everyone is welcome to add diferent overlays to show interesting data like stadings positions, predicted points... you name it! These are the steps you should do to make this posible:
-
-Remember!! You will find another README file on /src/overlays with steps to implement new overlays as easy as posible!
+I hope you want to take part in this journey! Everyone is welcome to add new overlays showing interesting data: predicted points, tyre data... you name it! See [src/overlays/README.md](src/overlays/README.md) for the steps to add a new overlay.
 
 1. Fork the project.
-2. Clone your forked repository to your local machine.
-3. Create a new branch for your feature or fix:
- ```bash
+2. Clone your fork to your local machine.
+3. Create a branch for your feature or fix:
+```bash
 git checkout -b feature-name
 ```
-4. Commit your changes
+4. Commit your changes:
 ```bash
 git commit -m "Add some feature"
 ```
-5. Pust your changes!
+5. Push your changes and open a pull request:
 ```bash
 git push origin feature-name
 ```
 
 ## **License**
-This project is licensed under the MIT License.
+
+This project is licensed under the [MIT License](LICENSE).
