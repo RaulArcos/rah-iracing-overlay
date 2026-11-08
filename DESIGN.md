@@ -61,6 +61,11 @@ JS errors, clipped text and panel bounds. Fixture screenshots are simulated,
 not proof of live iRacing accuracy. Keep functional Python and Node suites green.
 
 ## 8. Accepted debt and handoff
+The launcher follows the portfolio's quieter presentation: readable warm-gray
+secondary text, solid tool panels, no scanning beams, background drift, blinking
+status or repeated entrance animations. Real running state and saving feedback
+remain visible. Original/Glass race widgets and their telemetry contracts are
+unchanged. Source changes require a separate build to reach the downloadable app.
 Live iRacing, OBS and desktop transparency still require manual checks.
 R2 implements real roster ratings and class metadata; R3 implements lap observations
 and recent-lap comparison; R4 implements proximity visuals. Their dedicated JS
