@@ -42,7 +42,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 (a.display_name || '').localeCompare(b.display_name || ''));
             renderList();
             $('overlayCount').textContent = String(state.overlays.length).padStart(2, '0');
-            setTimeout(() => $('overlayList').classList.add('settled'), 900);
             syncActiveOverlays();
             let last = null;
             try { last = window.localStorage.getItem(LAST_KEY); } catch (error) { last = null; }
@@ -53,7 +52,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     setInterval(syncActiveOverlays, 3000);
     window.addEventListener('resize', fitStage);
-    startClock();
 });
 
 /* ---------- List ---------- */
@@ -134,9 +132,6 @@ function selectOverlay(folder) {
     document.querySelector('.preview-placeholder').hidden = true;
     const content = document.querySelector('.preview-content');
     content.hidden = false;
-    content.classList.remove('is-entering');
-    void content.offsetWidth; // restart the entrance animation
-    content.classList.add('is-entering');
     const index = state.overlays.indexOf(overlay) + 1;
     $('detailKicker').textContent = `Overlay ${String(index).padStart(2, '0')} / ${String(state.overlays.length).padStart(2, '0')}`;
     $('previewTitle').textContent = overlay.display_name;
@@ -420,14 +415,6 @@ function toggleOverlay(folder) {
     if (!overlay) return;
     if (state.open.has(folder)) closeOverlay(overlay.display_name, folder);
     else launchOverlay(overlay.display_name, folder, true);
-}
-
-/* ---------- Chrome: clock ---------- */
-function startClock() {
-    const clock = $('clock');
-    const tick = () => { clock.textContent = new Date().toLocaleTimeString('en-GB', {hour12: false}); };
-    tick();
-    setInterval(tick, 1000);
 }
 
 /* ---------- Theme ---------- */
